@@ -1,49 +1,51 @@
 /*
-* Tencent is pleased to support the open source community by making Puerts available.
-* Copyright (C) 2020 THL A29 Limited, a Tencent company.  All rights reserved.
-* Puerts is licensed under the BSD 3-Clause License, except for the third-party components listed in the file 'LICENSE' which may be subject to their corresponding license terms.
-* This file is subject to the terms and conditions defined in file 'LICENSE', which is part of this source code package.
-*/
+ * Tencent is pleased to support the open source community by making Puerts available.
+ * Copyright (C) 2020 THL A29 Limited, a Tencent company.  All rights reserved.
+ * Puerts is licensed under the BSD 3-Clause License, except for the third-party components listed in the file 'LICENSE' which may be subject to their corresponding license terms.
+ * This file is subject to the terms and conditions defined in file 'LICENSE', which is part of this source code package.
+ */
 
 declare module "puerts" {
-    import {Object, Class, $Delegate} from "ue"
-    
+    import { Object, Class, $Delegate } from "ue";
+
     interface $Ref<T> {
-        value: T
+        value: T;
     }
-    
+
     type $Nullable<T> = T | null;
-    
-    function $ref<T>(x : T) : $Ref<T>;
-    
-    function $unref<T>(x: $Ref<T>) : T;
-    
-    function $set<T>(x: $Ref<T>, val:T) : void;
-    
-    const argv : {
+
+    function $ref<T>(x: T): $Ref<T>;
+
+    function $unref<T>(x: $Ref<T>): T;
+
+    function $set<T>(x: $Ref<T>, val: T): void;
+
+    const argv: {
         getByIndex(index: number): Object;
         getByName(name: string): Object;
-    }
-    
+    };
+
     function merge(des: {}, src: {}): void;
     function registerBuildinModule(name: string, module: any): void;
-    
+
     //function requestJitModuleMethod(moduleName: string, methodName: string, callback: (err: Error, result: any)=> void, ... args: any[]): void;
-    
-    function makeUClass(ctor: { new(): Object }): Class;
-    
-    function blueprint<T extends {
-        new (...args:any[]): Object;
-    }>(path:string): T;
-    
-    function on(eventType: string, listener: Function, prepend?: boolean) : void;
-    
-    function off(eventType: string, listener: Function) : void;
-    
-    function emit(eventType: string, ...args:any[]) : boolean;
-    
+
+    function makeUClass(ctor: { new (): Object }): Class;
+
+    function blueprint<
+        T extends {
+            new (...args: any[]): Object;
+        }
+    >(path: string): T;
+
+    function on(eventType: string, listener: Function, prepend?: boolean): void;
+
+    function off(eventType: string, listener: Function): void;
+
+    function emit(eventType: string, ...args: any[]): boolean;
+
     function toManualReleaseDelegate<T extends (...args: any) => any>(func: T): $Delegate<T>;
-    
+
     function releaseManualReleaseDelegate<T extends (...args: any) => any>(func: T): void;
 
     /*function getProperties(obj: Object, ...propNames:string[]): any;
@@ -62,3 +64,9 @@ declare module "puerts" {
 }
 
 declare function require(name: string): any;
+
+// --> modified by kg begin
+// liangcheng: 因为require时puertr调用时传入了__filename以及__dirname，所以要使用他们得加个声明
+declare const __filename: string;
+declare const __dirname: string;
+// --< end
