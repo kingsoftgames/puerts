@@ -86,7 +86,8 @@ namespace puerts
         {
             return true;
         }
-        else if (RequiredDir != TEXT("") && !RequiredModule.GetCharArray().Contains('/') && !RequiredModule.EndsWith(TEXT(".js")))
+        //else if (RequiredDir != TEXT("") && !RequiredModule.GetCharArray().Contains('/') && !RequiredModule.EndsWith(TEXT(".js")))--暂时去掉Contains("/")符号判断路径，部分插件找不到，持续观察是否会对其他插件产生影响
+        else if (RequiredDir != TEXT("")  && !RequiredModule.EndsWith(TEXT(".js")))
         {
             // 调用require的文件所在的目录往上找
             TArray<FString> pathFrags;
@@ -104,7 +105,7 @@ namespace puerts
                 pathFrags.Pop();
             }
         }
-        
+
 		return SearchModuleInDir(FPaths::ProjectContentDir() / ScriptRoot, RequiredModule, Path, AbsolutePath)
             // Modify by Song Fuhao 解决插件自带脚本启动寻址问题
             // Modify by Tiansen  使用宏替换
@@ -122,7 +123,7 @@ namespace puerts
             Content.AddUninitialized(len);
             FileHandle->Read(Content.GetData(), len);
             delete FileHandle;
-            
+
             return true;
         }
         return false;
