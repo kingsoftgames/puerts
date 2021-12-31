@@ -86,6 +86,8 @@ namespace puerts
         {
             return true;
         }
+        // Modify by Tiansen  去掉contains("/")条件判断，该条件判断会导致部分插件查找不到（比如：protobuf）
+        //else if (RequiredDir != TEXT("") && !RequiredModule.GetCharArray().Contains('/') && !RequiredModule.EndsWith(TEXT(".js")))
         else if (RequiredDir != TEXT("") && !RequiredModule.GetCharArray().Contains('/') && !RequiredModule.EndsWith(TEXT(".js")))
         {
             // 调用require的文件所在的目录往上找
@@ -104,7 +106,7 @@ namespace puerts
                 pathFrags.Pop();
             }
         }
-        
+
 		return SearchModuleInDir(FPaths::ProjectContentDir() / ScriptRoot, RequiredModule, Path, AbsolutePath)
             // Modify by Song Fuhao 解决插件自带脚本启动寻址问题
             // Modify by Tiansen  使用宏替换
@@ -122,7 +124,7 @@ namespace puerts
             Content.AddUninitialized(len);
             FileHandle->Read(Content.GetData(), len);
             delete FileHandle;
-            
+
             return true;
         }
         return false;
