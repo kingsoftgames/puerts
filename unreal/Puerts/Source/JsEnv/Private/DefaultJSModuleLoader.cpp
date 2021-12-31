@@ -88,7 +88,7 @@ namespace puerts
         }
         // Modify by Tiansen  去掉contains("/")条件判断，该条件判断会导致部分插件查找不到（比如：protobuf）
         //else if (RequiredDir != TEXT("") && !RequiredModule.GetCharArray().Contains('/') && !RequiredModule.EndsWith(TEXT(".js")))
-        else if (RequiredDir != TEXT("") && !RequiredModule.GetCharArray().Contains('/') && !RequiredModule.EndsWith(TEXT(".js")))
+        else if (RequiredDir != TEXT("") && !RequiredModule.EndsWith(TEXT(".js")))
         {
             // 调用require的文件所在的目录往上找
             TArray<FString> pathFrags;
