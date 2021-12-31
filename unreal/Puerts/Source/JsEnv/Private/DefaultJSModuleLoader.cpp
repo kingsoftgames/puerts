@@ -87,7 +87,7 @@ namespace puerts
             return true;
         }
         // --> modified by ksg begin
-        // tiansen:此处去掉contains("/")条件判断，该条件判断会导致部分插件查找不到（比如：protobuf）
+        // tiansen:此处去掉contains("/")条件判断，该条件判断会导致部分插件查找不到（比如：protobufjs/src/index.js）
         //else if (RequiredDir != TEXT("") && !RequiredModule.GetCharArray().Contains('/') && !RequiredModule.EndsWith(TEXT(".js")))
         else if (RequiredDir != TEXT("") && !RequiredModule.EndsWith(TEXT(".js")))
         // --< end
