@@ -89,8 +89,8 @@ namespace puerts
         // --> modified by ksg begin
         // tiansen:此处去掉contains("/")条件判断，该条件判断会导致部分插件查找不到（比如：protobuf）
         //else if (RequiredDir != TEXT("") && !RequiredModule.GetCharArray().Contains('/') && !RequiredModule.EndsWith(TEXT(".js")))
-        // --< end
         else if (RequiredDir != TEXT("") && !RequiredModule.EndsWith(TEXT(".js")))
+        // --< end
         {
             // 调用require的文件所在的目录往上找
             TArray<FString> pathFrags;
