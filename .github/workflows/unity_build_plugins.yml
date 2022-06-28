@@ -24,7 +24,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build_v8.yml
+          workflow: build_8.4.yml
           name: v8_bin
           repo: puerts/backend-v8
           path: unity/native_src/
@@ -34,13 +34,11 @@ jobs:
           wget -O NDK -q https://dl.google.com/android/repository/android-ndk-r21b-linux-x86_64.zip
           sudo apt install unzip -y
           unzip -q NDK
-          export ANDROID_NDK=~/android-ndk-r21b
       - name: Build
         run: |
-          ls ~/android-ndk-r21b
           cd unity/native_src
           chmod 777 make_android.sh
-          ./make_android.sh
+          ANDROID_NDK=~/android-ndk-r21b ./make_android.sh
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
@@ -65,13 +63,12 @@ jobs:
           wget -O NDK -q https://dl.google.com/android/repository/android-ndk-r21b-linux-x86_64.zip
           sudo apt install unzip -y
           unzip -q NDK
-          export ANDROID_NDK=~/android-ndk-r21b
       - name: Build
         run: |
           ls ~/android-ndk-r21b
           cd unity/native_src
           chmod 777 make_android.sh
-          ./make_android.sh quickjs
+          ANDROID_NDK=~/android-ndk-r21b ./make_android.sh quickjs
       - name: Upload
         uses: actions/upload-artifact@v2
         with:
@@ -86,7 +83,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build_v8.yml
+          workflow: build_8.4.yml
           name: v8_bin
           repo: puerts/backend-v8
           path: unity/native_src/
@@ -134,7 +131,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build_v8.yml
+          workflow: build_8.4.yml
           name: v8_bin
           repo: puerts/backend-v8
           path: unity/native_src/
@@ -206,7 +203,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build_v8.yml
+          workflow: build_8.4.yml
           name: v8_bin
           repo: puerts/backend-v8
           path: unity/native_src/
@@ -280,7 +277,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build_v8.yml
+          workflow: build_8.4.yml
           name: v8_bin
           repo: puerts/backend-v8
           path: unity/native_src/
