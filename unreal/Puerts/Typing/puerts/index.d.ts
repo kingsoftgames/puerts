@@ -1,74 +1,89 @@
 /*
-* Tencent is pleased to support the open source community by making Puerts available.
-* Copyright (C) 2020 THL A29 Limited, a Tencent company.  All rights reserved.
-* Puerts is licensed under the BSD 3-Clause License, except for the third-party components listed in the file 'LICENSE' which may be subject to their corresponding license terms.
-* This file is subject to the terms and conditions defined in file 'LICENSE', which is part of this source code package.
-*/
+ * Tencent is pleased to support the open source community by making Puerts available.
+ * Copyright (C) 2020 THL A29 Limited, a Tencent company.  All rights reserved.
+ * Puerts is licensed under the BSD 3-Clause License, except for the third-party components listed in the file 'LICENSE' which may be subject to their corresponding license terms.
+ * This file is subject to the terms and conditions defined in file 'LICENSE', which is part of this source code package.
+ */
 
 declare module "puerts" {
-    import {Object, Class, $Delegate} from "ue"
-    
+import { $Delegate, Class, Object } from "ue";
+
     interface $Ref<T> {
-        __doNoAccess: T
-    }
+    __doNoAccess: T;
+  }
 
-    interface $InRef<T> {
-        __doNoAccess: T
-    }
-    
-    type $Nullable<T> = T | null;
-    
-    function $ref<T>(x? : T) : $Ref<T>;
-    
-    function $unref<T>(x: $Ref<T> | $InRef<T>) : T;
-    
-    function $set<T>(x: $Ref<T> | $InRef<T>, val:T) : void;
-    
-    const argv : {
-        getByIndex(index: number): Object;
-        getByName(name: string): Object;
-    }
-    
-    function merge(des: {}, src: {}): void;
-    // --> modified by kg begin
-    // songfuhao: 暴露registerBuildinModule接口用于注册内置模块
-    function registerBuildinModule(name: string, module: any): void;
-    // --< end
-    
-    //function requestJitModuleMethod(moduleName: string, methodName: string, callback: (err: Error, result: any)=> void, ... args: any[]): void;
-    
-    function makeUClass(ctor: { new(): Object }): Class;
-    
-    function blueprint<T extends {
-        new (...args:any[]): Object;
-    }>(path:string): T;
+  interface $InRef<T> {
+    __doNoAccess: T;
+  }
 
-    namespace blueprint {
-        type MixinConfig = { objectTakeByNative?:boolean, inherit?:boolean, generatedClass?: Class};
-        function tojs<T extends typeof Object>(cls:Class): T;
-        function mixin<T extends typeof Object, R extends InstanceType<T>>(to:T, mixinMethods:new (...args: any) => R, config?: MixinConfig) : {
-            new (Outer?: Object, Name?: string, ObjectFlags?: number) : R;
-            StaticClass(): Class;
-        };
-    }
-    
-    function on(eventType: string, listener: Function, prepend?: boolean) : void;
-    
-    function off(eventType: string, listener: Function) : void;
-    
-    function emit(eventType: string, ...args:any[]) : boolean;
-    
-    function toManualReleaseDelegate<T extends (...args: any) => any>(func: T): $Delegate<T>;
-    
-    function releaseManualReleaseDelegate<T extends (...args: any) => any>(func: T): void;
-    
-    function toDelegate<T extends Object, K extends keyof T>(obj: T, key: T[K] extends (...args: any) => any ? K : never) : $Delegate<T[K] extends (...args: any) => any ? T[K] : never>;
+  type $Nullable<T> = T | null;
 
-    // --> modified by kg begin
-    // songfuhao: 保存未修改前的 console，以便于接入devtools相关接口逻辑
-    const console_org: Console;
-    // --< end
-    /*function getProperties(obj: Object, ...propNames:string[]): any;
+  type cstring = string | ArrayBuffer;
+
+  function toCString(str: string): ArrayBuffer;
+
+  function toCPtrArray(...ab: ArrayBuffer[]): ArrayBuffer;
+
+  function $ref<T>(x?: T): $Ref<T>;
+
+  function $unref<T>(x: $Ref<T> | $InRef<T>): T;
+
+  function $set<T>(x: $Ref<T> | $InRef<T>, val: T): void;
+
+  const argv: {
+    getByIndex(index: number): Object;
+    getByName(name: string): Object;
+  };
+
+  function merge(des: {}, src: {}): void;
+  // --> modified by kg begin
+  // songfuhao: 暴露registerBuildinModule接口用于注册内置模块
+  function registerBuildinModule(name: string, module: any): void;
+  // --< end
+
+  //function requestJitModuleMethod(moduleName: string, methodName: string, callback: (err: Error, result: any)=> void, ... args: any[]): void;
+
+  function makeUClass(ctor: { new (): Object }): Class;
+
+  function blueprint<
+    T extends {
+      new (...args: any[]): Object;
+    }
+  >(path: string): T;
+
+  namespace blueprint {
+    type MixinConfig = { objectTakeByNative?: boolean; inherit?: boolean; generatedClass?: Class; noMixinedWarning?: boolean };
+    function tojs<T extends typeof Object>(cls: Class): T;
+    function mixin<T extends typeof Object, R extends InstanceType<T>>(
+      to: T,
+      mixinMethods: new (...args: any) => R,
+      config?: MixinConfig
+    ): {
+      new (Outer?: Object, Name?: string, ObjectFlags?: number): R;
+      StaticClass(): Class;
+    };
+    function unmixin<T extends typeof Object>(to: T): void;
+    function load(cls: any): void;
+    function unload(cls: any): void;
+  }
+
+  function on(eventType: string, listener: Function, prepend?: boolean): void;
+
+  function off(eventType: string, listener: Function): void;
+
+  function emit(eventType: string, ...args: any[]): boolean;
+
+  function toManualReleaseDelegate<T extends (...args: any) => any>(func: T): $Delegate<T>;
+
+  function releaseManualReleaseDelegate<T extends (...args: any) => any>(func: T): void;
+
+  function toDelegate<T extends Object, K extends keyof T>(obj: T, key: T[K] extends (...args: any) => any ? K : never): $Delegate<T[K] extends (...args: any) => any ? T[K] : never>;
+
+  // --> modified by kg begin
+  // songfuhao: 保存未修改前的 console，以便于接入devtools相关接口逻辑
+  const console_org: Console;
+  // --< end
+  /*function getProperties(obj: Object, ...propNames:string[]): any;
     function getPropertiesAsync(obj: Object, ...propNames:string[]): Promise<any>;
     function setProperties(obj: Object, properties: any):void;
     function setPropertiesAsync(obj: Object, properties: any):Promise<void>;
@@ -82,8 +97,6 @@ declare module "puerts" {
 
     function $async<T>(x: T) : AsyncObject<T>;*/
 }
-
-declare function require(name: string): any;
 
 // --> modified by kg begin
 // liangcheng: 因为require时puerts调用时传入了__filename以及__dirname，所以要使用他们得加个声明
