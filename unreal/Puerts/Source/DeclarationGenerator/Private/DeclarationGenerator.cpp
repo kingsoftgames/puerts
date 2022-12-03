@@ -35,6 +35,7 @@
 #if (ENGINE_MAJOR_VERSION >= 5)
 #include "ToolMenus.h"
 #endif
+#include "Internationalization/Regex.h"
 
 #include "PuertsModule.h"
 
@@ -354,12 +355,9 @@ void FTypeScriptDeclarationGenerator::GenTypeScriptDeclaration(bool GenStruct, b
             {
                 Gen(UserDefinedEnum);
             }
-            if (GenStruct)
+            if (auto UserDefinedStruct = Cast<UUserDefinedStruct>(Asset))
             {
-                if (auto UserDefinedStruct = Cast<UUserDefinedStruct>(Asset))
-                {
-                    Gen(UserDefinedStruct);
-                }
+                Gen(UserDefinedStruct);
             }
         }
     }
@@ -375,9 +373,12 @@ void FTypeScriptDeclarationGenerator::GenTypeScriptDeclaration(bool GenStruct, b
     {
         if (KV.Value.IsExist)
         {
-            Output << TYPE_DECL_START << KV.Value.FileVersionString << "\n";
-            Output << KV.Value.TypeDecl;
-            Output << TYPE_DECL_END << "\n";
+            for (auto& NameToDecl : KV.Value.NameToDecl)
+            {
+                Output << TYPE_DECL_START << KV.Value.FileVersionString << "\n";
+                Output << NameToDecl.Value;
+                Output << TYPE_DECL_END << "\n";
+            }
         }
     }
     End();
@@ -470,7 +471,7 @@ void FTypeScriptDeclarationGenerator::WriteOutput(UObject* Obj, const FStringBuf
         NamespaceBegin(Obj, Temp);
         Temp << Buff;
         NamespaceEnd(Obj, Temp);
-        BlueprintTypeDeclInfoCache[Pkg->GetFName()].TypeDecl = Temp.Buffer;
+        BlueprintTypeDeclInfoCache[Pkg->GetFName()].NameToDecl.Add(Obj->GetFName(), Temp.Buffer);
         BlueprintTypeDeclInfoCache[Pkg->GetFName()].IsExist = true;
     }
     else
@@ -516,7 +517,26 @@ void FTypeScriptDeclarationGenerator::RestoreBlueprintTypeDeclInfos(const FStrin
                         TypeDecl.Mid(NamespaceStart + NS_Keyword.Len(), NamespaceEnd - NamespaceStart - NS_Keyword.Len())
                             .TrimStartAndEnd();
                     FString PackageName = FString(TEXT("/")) + Namespace.Replace(TEXT("."), TEXT("/"));
-                    BlueprintTypeDeclInfoCache.Add(FName(*PackageName), {TypeDecl, FileVersionString, false, true});
+
+                    FRegexPattern Pattern(TEXT("\\{\\s+(?:(?:class)|(?:enum))\\s+([a-zA-Z0-9_]+)"));
+                    FRegexMatcher Matcher(Pattern, TypeDecl.Mid(NamespaceEnd));
+
+                    if (Matcher.FindNext())
+                    {
+                        FName TypeName = *Matcher.GetCaptureGroup(1);
+                        auto BlueprintTypeDeclInfoPtr = BlueprintTypeDeclInfoCache.Find(*PackageName);
+
+                        if (BlueprintTypeDeclInfoPtr)
+                        {
+                            BlueprintTypeDeclInfoPtr->NameToDecl.Add(TypeName, TypeDecl);
+                        }
+                        else
+                        {
+                            TMap<FName, FString> NameToDecl;
+                            NameToDecl.Add(TypeName, TypeDecl);
+                            BlueprintTypeDeclInfoCache.Add(FName(*PackageName), {NameToDecl, FileVersionString, false, true});
+                        }
+                    }
                 }
             }
         }
@@ -535,25 +555,33 @@ void FTypeScriptDeclarationGenerator::LoadAllWidgetBlueprint(FName SearchPath)
     BPFilter.PackagePaths.Add(PackagePath);
     BPFilter.bRecursivePaths = true;
     BPFilter.bRecursiveClasses = true;
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION > 0
+    BPFilter.ClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
+    BPFilter.ClassPaths.Add(UUserDefinedEnum::StaticClass()->GetClassPathName());
+    BPFilter.ClassPaths.Add(UUserDefinedStruct::StaticClass()->GetClassPathName());
+#else
     BPFilter.ClassNames.Add(FName(TEXT("Blueprint")));
     BPFilter.ClassNames.Add(FName(TEXT("UserDefinedEnum")));
     BPFilter.ClassNames.Add(FName(TEXT("UserDefinedStruct")));
+#endif
 
     AssetRegistry.GetAssets(BPFilter, AssetList);
     for (FAssetData const& AssetData : AssetList)
     {
         const FAssetPackageData* PackageData = AssetRegistry.GetAssetPackageData(AssetData.PackageName);
         auto BlueprintTypeDeclInfoPtr = BlueprintTypeDeclInfoCache.Find(AssetData.PackageName);
-        auto FileVersion = PackageData->PackageGuid.ToString();
-        if (BlueprintTypeDeclInfoPtr)
+
+        if (PackageData && BlueprintTypeDeclInfoPtr)
         {
+            auto FileVersion = PackageData->PackageGuid.ToString();
             BlueprintTypeDeclInfoPtr->IsExist = true;
             BlueprintTypeDeclInfoPtr->Changed = FileVersion != BlueprintTypeDeclInfoPtr->FileVersionString;
             BlueprintTypeDeclInfoPtr->FileVersionString = FileVersion;
         }
         else
         {
-            BlueprintTypeDeclInfoCache.Add(AssetData.PackageName, {TEXT(""), FileVersion, true, true});
+            BlueprintTypeDeclInfoCache.Add(AssetData.PackageName,
+                {TMap<FName, FString>(), PackageData ? PackageData->PackageGuid.ToString() : FString(TEXT("")), true, true});
         }
     }
 }
