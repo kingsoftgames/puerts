@@ -588,6 +588,15 @@ void FTypeScriptDeclarationGenerator::LoadAllWidgetBlueprint(FName InSearchPath,
 
 void FTypeScriptDeclarationGenerator::Gen(UObject* ToGen)
 {
+    // --> modified by kg begin
+    // hewenning: 修复 Blueprint 的 GeneratedClass 为空时导出 dts 崩溃的问题
+    if (!IsValid(ToGen))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("UObject ToGen is invalid, please check output log"));
+        return;
+    }
+    // --< end
+
     if (ToGen->GetName().Equals(TEXT("ArrayBuffer")) || ToGen->GetName().Equals(TEXT("JsObject")))
     {
         return;
