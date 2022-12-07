@@ -99,6 +99,11 @@ import { $Delegate, Class, Object } from "ue";
 }
 
 // --> modified by kg begin
+// songfuhao: 保留 require，解决编译问题，引入 types/node 问题比较多
+declare function require(name: string): any;
+// --< end
+
+// --> modified by kg begin
 // liangcheng: 因为require时puerts调用时传入了__filename以及__dirname，所以要使用他们得加个声明
 declare const __filename: string;
 declare const __dirname: string;
