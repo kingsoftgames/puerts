@@ -9,7 +9,7 @@ var global = global || (function () { return this; }());
 (function (global) {
     "use strict";
     let puerts = global.puerts = global.puerts || {};
-
+    
     let sendRequestSync = puerts.sendRequestSync;
 
     function normalize(name) {
@@ -23,20 +23,20 @@ var global = global || (function () { return this; }());
         return eval(script);
     }
     global.__tgjsEvalScript = undefined;
-
+    
     let loadModule = global.__tgjsLoadModule;
     global.__tgjsLoadModule = undefined;
-
+    
     let searchModule = global.__tgjsSearchModule;
     global.__tgjsSearchModule = undefined;
-
+    
     let org_require = global.require;
-
+    
     let findModule = global.__tgjsFindModule;
     global.__tgjsFindModule = undefined;
-
+    
     let tmpModuleStorage = [];
-
+    
     function addModule(m) {
         for (var i = 0; i < tmpModuleStorage.length; i++) {
             if (!tmpModuleStorage[i]) {
@@ -46,7 +46,7 @@ var global = global || (function () { return this; }());
         }
         return tmpModuleStorage.push(m) - 1;
     }
-
+    
     function getModuleBySID(id) {
         return tmpModuleStorage[id];
     }
@@ -63,13 +63,13 @@ var global = global || (function () { return this; }());
         let wrapped = evalScript(
             // Wrap the script in the same way NodeJS does it. It is important since IDEs (VSCode) will use this wrapper pattern
             // to enable stepping through original source in-place.
-            "(function (exports, require, module, __filename, __dirname) { " + script + "\n});",
+            "(function (exports, require, module, __filename, __dirname) { " + script + "\n});", 
             debugPath
         )
         wrapped(exports, puerts.genRequire(fullDirInJs), module, fullPathInJs, fullDirInJs)
         return module.exports;
     }
-
+    
     function genRequire(requiringDir) {
         let localModuleCache = Object.create(null);
         function require(moduleName) {
@@ -98,9 +98,9 @@ var global = global || (function () { return this; }());
             if (!moduleInfo) {
                 throw new Error(`can not find ${moduleName} in ${requiringDir}`);
             }
-
+            
             let [fullPath, debugPath] = moduleInfo;
-
+            
             let key = fullPath;
             if ((key in moduleCache) && !forceReload) {
                 localModuleCache[moduleName] = moduleCache[key];
@@ -113,7 +113,7 @@ var global = global || (function () { return this; }());
             let script = loadModule(fullPath);
             if (fullPath.endsWith(".json")) {
                 let packageConfigure = JSON.parse(script);
-
+                
                 if (fullPath.endsWith("package.json") && packageConfigure.main) {
                     let fullDirInJs = (fullPath.indexOf('/') != -1) ? fullPath.substring(0, fullPath.lastIndexOf("/")) : fullPath.substring(0, fullPath.lastIndexOf("\\")).replace(/\\/g, '\\\\');
                     let tmpRequire = genRequire(fullDirInJs);
@@ -133,11 +133,11 @@ var global = global || (function () { return this; }());
 
         return require;
     }
-
+    
     function registerBuildinModule(name, module) {
         buildinModule[name] = module;
     }
-
+    
     function forceReload(reloadModuleKey) {
         if (reloadModuleKey) {
             reloadModuleKey = normalize(reloadModuleKey);
@@ -154,30 +154,30 @@ var global = global || (function () { return this; }());
             console.warn(`reload not loaded module: ${reloadModuleKey}!`);
         }
     }
-
+    
     function getModuleByUrl(url) {
         if (url) {
             url = normalize(url);
             return moduleCache[url];
         }
     }
-
+    
     registerBuildinModule("puerts", puerts)
 
     puerts.genRequire = genRequire;
-
+    
     puerts.__require = genRequire("");
-
+    
     global.require = puerts.__require;
-
+    
     puerts.getModuleBySID = getModuleBySID;
-
+    
     puerts.registerBuildinModule = registerBuildinModule;
 
     puerts.loadModule = loadModule;
-
+    
     puerts.forceReload = forceReload;
-
+    
     puerts.getModuleByUrl = getModuleByUrl;
 
     // --> modified by ksg begin
@@ -186,4 +186,4 @@ var global = global || (function () { return this; }());
         return moduleCache;
     };
     // --< end
-})(global);
+}(global));
