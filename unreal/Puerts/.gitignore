@@ -3,6 +3,7 @@ Intermediate
 ThirdParty/v8
 
 Typing/ue/ue.d.ts
+Typing/ue/ue_bp.d.ts
 Typing/cpp/index.d.ts
 
 *.a
