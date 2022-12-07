@@ -603,6 +603,13 @@ void FTypeScriptDeclarationGenerator::Gen(UObject* ToGen)
     }
     if (Processed.Contains(ToGen))
         return;
+    // --> modified by kg begin
+    // songfuhao: 新增忽略列表，解决重定向文件导出重复问题
+    const TArray<FString>& IgnorePathNameListOnDTS = IPuertsModule::Get().GetIgnorePathNameListOnDTS();
+    if (IgnorePathNameListOnDTS.Contains(ToGen->GetPathName()))
+        return;
+    }
+    // --< end
     if (ToGen->IsNative() && ProcessedByName.Contains(SafeName(ToGen->GetName())))
     {
         UE_LOG(LogTemp, Warning, TEXT("duplicate name found in ue.d.ts generate: %s"), *SafeName(ToGen->GetName()));

@@ -247,6 +247,14 @@ public:
         return GetDefault<UPuertsSetting>()->IgnoreStructListOnDTS;
     }
 
+    // --> modified by kg begin
+    // songfuhao: 新增忽略列表，解决重定向文件导出重复问题
+    virtual const TArray<FString>& GetIgnorePathNameListOnDTS()
+    {
+        return GetDefault<UPuertsSetting>()->IgnorePathNameListOnDTS;
+    }
+    // --< end
+
 private:
     TSharedPtr<puerts::FJsEnv> JsEnv;
 

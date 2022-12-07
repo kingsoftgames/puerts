@@ -49,4 +49,10 @@ public:
 
     UPROPERTY(config, EditAnywhere, Category = "Declaration Generator", meta = (DisplayName = "D.ts Ignore Struct Name List"))
     TArray<FString> IgnoreStructListOnDTS;
+
+    // --> modified by kg begin
+    // songfuhao: 新增忽略列表，解决重定向文件导出重复问题
+    UPROPERTY(config, EditAnywhere, Category = "Declaration Generator", meta = (DisplayName = "D.ts Ignore Type Path List"))
+    TArray<FString> IgnorePathNameListOnDTS;
+    // --< end
 };
