@@ -30,7 +30,11 @@ public class JsEnv : ModuleRules
 
     private bool ThreadSafe = false;
 
-    private bool FTextAsString = true;
+    // --> modified by kg begin
+    // songfuhao: TS 逻辑中接入 FText，不再使用 string 替代
+    // private bool FTextAsString = true;
+    private bool FTextAsString = false;
+    // --< end
 
     public JsEnv(ReadOnlyTargetRules Target) : base(Target)
     {
