@@ -22,7 +22,7 @@ export default TS_Player;
 然后你在UE编辑器就能选择它
 
 
-![select_character.png](../../pic/select_character.png)
+![select_character.png](../../../doc/pic/select_character.png)
 
 * 能被UE识别的类，支持构造函数，支持override蓝图能override的方法，支持轴映射Axis、Action事件，支持RPC
 
@@ -64,6 +64,16 @@ class TS_Player extends UE.Character {
 
 * 不支持继承蓝图，只支持继承原生类
 * 继承UserWidget或其子类并不能编辑
+
+### 相关命令行
+
+在UE命令行输入命令，可以查阅内部状态，手动触发特定typescript文件的编译
+
+* `puerts ls [pattern]`：查询纳入增量编译的文件，pattern是可选参数，支持正则表达式，不输入该参数标识所有文件。例子：
+    -  `puerts ls`
+    -  `puerts ls TsTestActor`
+* `puerts compile id`，其中id是`puerts ls`返回的id，例子：
+    - `puerts compile e9050088932a23f720713a9a5073986e`
 
 ### 生命周期
 

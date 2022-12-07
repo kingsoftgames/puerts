@@ -6,6 +6,11 @@ namespace Puerts.UnitTest
     [TestFixture]
     public class EvalTest
     {
+        // [Test]
+        // public void ForceFail()
+        // {
+        //     Assert.True(1 == 2);
+        // }
         [Test]
         public void EvalError()
         {
@@ -133,8 +138,32 @@ namespace Puerts.UnitTest
             loader.AddMockFileContent("whatever.cjs", @"
                 module.exports = 'hello world';
             ");
+            loader.AddMockFileContent("whatever.mjs", @"
+                import str from 'whatever.cjs';
+                
+                export default str;
+            ");
             var jsEnv = new JsEnv(loader);
-            string str = jsEnv.ExecuteModule<string>("whatever.cjs", "default");
+            string str = jsEnv.ExecuteModule<string>("whatever.mjs", "default");
+
+            Assert.True(str == "hello world");
+
+            jsEnv.Dispose();
+        }
+        [Test]
+        public void ESModuleExecuteCJSRelative()
+        {
+            var loader = new TxtLoader();
+            loader.AddMockFileContent("cjs/whatever.cjs", @"
+                module.exports = 'hello world';
+            ");
+            loader.AddMockFileContent("mjs/whatever.mjs", @"
+                import str from '../cjs/whatever.cjs';
+                
+                export default str;
+            ");
+            var jsEnv = new JsEnv(loader);
+            string str = jsEnv.ExecuteModule<string>("mjs/whatever.mjs", "default");
 
             Assert.True(str == "hello world");
 
@@ -145,8 +174,7 @@ namespace Puerts.UnitTest
         {
             var loader = new TxtLoader();
             loader.AddMockFileContent("whatever.mjs", @"
-                import csharp from 'csharp';
-                const func = function() { return csharp.System.String.Join(' ', 'hello', 'world') }
+                const func = function() { return CS.System.String.Join(' ', 'hello', 'world') }
                 export { func };
             ");
             var jsEnv = new JsEnv(loader);
@@ -157,11 +185,101 @@ namespace Puerts.UnitTest
             jsEnv.Dispose();
         }
         [Test]
+        public void ESModuleImportRelative()
+        {
+            var loader = new TxtLoader();
+            loader.AddMockFileContent("a/entry.mjs", @"
+                import { str } from '../b/whatever.mjs'; 
+                export { str };
+            ");
+            loader.AddMockFileContent("b/whatever.mjs", @"export const str = 'hello'");
+            var jsEnv = new JsEnv(loader);
+            string ret = jsEnv.ExecuteModule<string>("a/entry.mjs", "str");
+
+            Assert.True(ret == "hello");
+
+            jsEnv.Dispose();
+        }
+        [Test]
+        public void ESModuleImportCircular()
+        {
+            var loader = new TxtLoader();
+            loader.AddMockFileContent("module1.mjs", @"
+                import module2 from './module2.mjs';
+                // CS.System.Console.WriteLine('module1 loading');
+
+                function callMe(msg)
+                {
+                    module2.callMe('module 2');
+                    // CS.System.Console.WriteLine('callMe called', msg);
+                }
+
+                class M1
+                {
+                    constructor()
+                    {
+                        // CS.System.Console.WriteLine('M1');
+                    }
+                }
+
+                export default { callMe, M1 };
+            ");
+            loader.AddMockFileContent("module2.mjs", @"
+                import module1 from './module1.mjs';
+                // CS.System.Console.WriteLine('module2 loading');
+
+                function callMe(msg)
+                {
+                    new module1.M1();
+                    // CS.System.Console.WriteLine('callMe called', msg);
+                }
+
+
+                export default { callMe };
+            ");
+            loader.AddMockFileContent("main.mjs", @"
+                import module1 from './module1.mjs';
+                import module2 from './module2.mjs';
+
+                module1.callMe('from john');
+                module2.callMe('from bob');
+            ");
+            var jsEnv = new JsEnv(loader);
+
+            jsEnv.ExecuteModule("main.mjs");
+            jsEnv.Dispose();
+        }
+        [Test]
+        public void ESModuleImportNotRelative()
+        {
+            var loader = new TxtLoader();
+            loader.AddMockFileContent("lib/test.mjs", @"
+                import { M2 } from 'module2.mjs';
+                const Test = 'Test ' + M2
+
+                export { Test };
+            ");
+            loader.AddMockFileContent("module2.mjs", @"
+                const M2 = 'M2';
+                export { M2 };
+            ");
+            loader.AddMockFileContent("main.mjs", @"
+                import { M2 } from 'module2.mjs'
+                import { Test } from './lib/test.mjs';
+
+                export default M2 + Test;
+            ");
+            var jsEnv = new JsEnv(loader);
+
+            string res = jsEnv.ExecuteModule<string>("main.mjs", "default");
+            Assert.True(res == "M2Test M2");
+            jsEnv.Dispose();
+        }/*
+        [Test]
         public void ESModuleImportCSharpNamespace()
         {
             var loader = new TxtLoader();
             loader.AddMockFileContent("whatever.mjs", @"
-                import csharp from 'csharp';
                 const func = function() { return csharp.System.String.Join(' ', 'hello', 'world') }
                 export { func };
             ");
@@ -171,6 +289,25 @@ namespace Puerts.UnitTest
             Assert.True(ns != null);
             Assert.True(ns.GetType() == typeof(JSObject));
 
+            jsEnv.Dispose();
+        }*/
+        internal class ESMTxtLoader: TxtLoader, Puerts.IModuleChecker
+        {
+            public bool IsESM(string s) {
+                return true;
+            }
+        }
+        [Test]
+        public void ESMLoaderTest() 
+        {
+            var loader = new ESMTxtLoader();
+            loader.AddMockFileContent("main.js", @"
+                export default 'esm export';
+            ");
+            var jsEnv = new JsEnv(loader);
+
+            string res = jsEnv.ExecuteModule<string>("main.js", "default");
+            Assert.AreEqual(res, "esm export");
             jsEnv.Dispose();
         }
     }

@@ -5,6 +5,8 @@
 * This file is subject to the terms and conditions defined in file 'LICENSE', which is part of this source code package.
 */
 
+#if !EXPERIMENTAL_IL2CPP_PUERTS || !ENABLE_IL2CPP
+
 using System;
 
 namespace Puerts
@@ -18,37 +20,13 @@ namespace Puerts
             pathForDebug = identifer;
             try
             {
-                if (identifer.Length < 4 || !identifer.EndsWith(".mjs")) 
-                {
-                    return "export default require('" + identifer + "')";
-                } 
-                else 
-                {
-                    return env.ResolveModuleContent(identifer, out pathForDebug);
-                }
+                return env.ResolveModuleContent(identifer, out pathForDebug);
             }
             catch (Exception e)
             {
                 // 因为只是C++到C#的通信，此处C++侧没有加v8::TryCatch。不能用PuertsDLL.ThrowException
                 // PuertsDLL.ThrowException(env.isolate, "ModuleResolverWrap c# exception:" + e.Message + ",stack:" + e.StackTrace);
                 return "throw new Error('resolve module " + identifer + " error: " + e.Message + "')";
-            }
-        }
-
-        [MonoPInvokeCallback(typeof(PushJSFunctionArgumentsCallback))]
-        internal static void PushJSFunctionArgumentsCallback(IntPtr isolate, int jsEnvIdx, IntPtr nativeJsFuncPtr)
-        {
-            try 
-            {
-                if (JsEnv.jsEnvs[jsEnvIdx].ArgumentsPusher == null)
-                {
-                    throw new Exception("JsEnv.JSFunctionArgumentsPusher is not setted");
-                }
-                JsEnv.jsEnvs[jsEnvIdx].ArgumentsPusher(isolate, jsEnvIdx, nativeJsFuncPtr);
-            } 
-            catch(Exception e)
-            {
-                PuertsDLL.ThrowException(isolate, "JsEnvCallbackWrap c# exception:" + e.Message + ",stack:" + e.StackTrace);
             }
         }
 
@@ -103,3 +81,5 @@ namespace Puerts
         }
     }
 }
+
+#endif

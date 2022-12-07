@@ -239,7 +239,7 @@ UFunction* UJSGeneratedClass::Mixin(v8::Isolate* Isolate, UClass* Class, UFuncti
     }
 
     Function->DynamicInvoker = DynamicInvoker;
-    Function->FunctionTranslator = std::make_unique<puerts::FFunctionTranslator>(Function, false);
+    Function->FunctionTranslator = std::make_unique<puerts::FFunctionTranslator>(Existed ? Super : Function, false);
     Function->TakeJsObjectRef = TakeJsObjectRef;
 
     Function->Next = Class->Children;
@@ -271,7 +271,11 @@ void UJSGeneratedClass::Restore(UClass* Class)
     FName OrphanedClassName =
         MakeUniqueObjectName(GetTransientPackage(), UBlueprintGeneratedClass::StaticClass(), FName(*OrphanedClassString));
     UClass* OrphanedClass = NewObject<UBlueprintGeneratedClass>(GetTransientPackage(), OrphanedClassName, RF_Public | RF_Transient);
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION > 0
+    OrphanedClass->CppClassStaticFunctions = Class->CppClassStaticFunctions;
+#else
     OrphanedClass->ClassAddReferencedObjects = Class->AddReferencedObjects;
+#endif
     OrphanedClass->ClassFlags |= CLASS_CompiledFromBlueprint;
 #if ENGINE_MAJOR_VERSION < 5 || WITH_EDITOR
     OrphanedClass->ClassGeneratedBy = Class->ClassGeneratedBy;

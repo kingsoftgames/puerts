@@ -26,17 +26,19 @@ public class WrapperGenConfig
                 typeof(Puerts.UnitTest.GenericGenTest<Type, JsEnv>),
                 typeof(Puerts.UnitTest.GenericGenTest2),
                 typeof(Puerts.UnitTest.GenericWrapperBase<JsEnv>),
+                typeof(Puerts.UnitTest.AmbigiousCallTest),
+                typeof(Puerts.UnitTest.ParamsCallTest)
             };
         }
     }
 }
 
-public class PuertsTest
+public class PuerGen
 {
     public static void Main()
     {
         Puerts.Editor.Generator.FileExporter.ExportWrapper(
-            TxtLoader.PathToBinDir("../../Src/UnitTest/wrap/"),
+            TxtLoader.PathToBinDir("../../../Src/StaticWrapper/"),
             new TxtLoader()
         );
     }

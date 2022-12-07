@@ -31,10 +31,6 @@ namespace Puerts.UnitTest
     [TestFixture]
     public class TimerTest
     {
-        [OneTimeSetUp]
-        public static void Init()
-        {
-        }
 
         public static int SetTimeoutTestNum;
         [Test]
@@ -44,7 +40,6 @@ namespace Puerts.UnitTest
             var jsEnv = new JsEnv(new TxtLoader());
 
             var timer = jsEnv.Eval<Timer>(@"
-                const CS = require('csharp');
                 let timer = new CS.Puerts.UnitTest.Timer(Date.now());
                 Date.now = ()=>timer.Now();
                 let obj = CS.Puerts.UnitTest.TimerTest;
@@ -81,7 +76,6 @@ namespace Puerts.UnitTest
             var jsEnv = new JsEnv(new TxtLoader());
 
             var timer = jsEnv.Eval<Timer>(@"
-                const CS = require('csharp');
                 let timer = new CS.Puerts.UnitTest.Timer(Date.now());
                 Date.now = ()=>timer.Now();
                 let obj = CS.Puerts.UnitTest.TimerTest;
@@ -108,7 +102,6 @@ namespace Puerts.UnitTest
             var jsEnv = new JsEnv(new TxtLoader());
 
             var timer = jsEnv.Eval<Timer>(@"
-                const CS = require('csharp');
                 let timer = new CS.Puerts.UnitTest.Timer(Date.now());
                 Date.now = ()=>timer.Now();
                 let obj = CS.Puerts.UnitTest.TimerTest;
@@ -137,7 +130,6 @@ namespace Puerts.UnitTest
             var jsEnv = new JsEnv(new TxtLoader());
 
             var timer = jsEnv.Eval<Timer>(@"
-                const CS = require('csharp');
                 let timer = new CS.Puerts.UnitTest.Timer(Date.now());
                 Date.now = ()=>timer.Now();
                 let obj = CS.Puerts.UnitTest.TimerTest;
@@ -171,7 +163,6 @@ namespace Puerts.UnitTest
             var jsEnv = new JsEnv(new TxtLoader());
 
             var timer = jsEnv.Eval<Timer>(@"
-                const CS = require('csharp');
                 let timer = new CS.Puerts.UnitTest.Timer(Date.now());
                 Date.now = ()=>timer.Now();
                 let obj = CS.Puerts.UnitTest.TimerTest;
@@ -206,7 +197,6 @@ namespace Puerts.UnitTest
             var jsEnv = new JsEnv(new TxtLoader());
 
             var timer = jsEnv.Eval<Timer>(@"
-                const CS = require('csharp');
                 let timer = new CS.Puerts.UnitTest.Timer(Date.now());
                 Date.now = ()=>timer.Now();
                 let obj = CS.Puerts.UnitTest.TimerTest;

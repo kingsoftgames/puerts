@@ -14,10 +14,13 @@ public class TxtLoader : ILoader
             appendix
         );
     }
-
+#if PUER_CONSOLE_TEST
+    private string root = PathToBinDir("../../../../Assets/Puerts/Runtime/Resources");
+    private string editorRoot = PathToBinDir("../../../../Assets/Puerts/Editor/Resources");
+#else
     private string root = PathToBinDir("../../../Assets/Puerts/Runtime/Resources");
     private string editorRoot = PathToBinDir("../../../Assets/Puerts/Editor/Resources");
-
+#endif
     public bool FileExists(string filepath)
     {
         return mockFileContent.ContainsKey(filepath) ||

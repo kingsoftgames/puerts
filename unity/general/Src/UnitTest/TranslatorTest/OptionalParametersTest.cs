@@ -9,9 +9,8 @@ namespace Puerts.UnitTest
         public void WarpTest1()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test(1,3);
            ");
@@ -22,9 +21,8 @@ namespace Puerts.UnitTest
         public void WarpTest2()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test('1',3);
            ");
@@ -35,9 +33,8 @@ namespace Puerts.UnitTest
         public void WarpTest3()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test('1');
            ");
@@ -48,9 +45,8 @@ namespace Puerts.UnitTest
         public void WarpTest4()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test(6,6,6);
            ");
@@ -61,9 +57,8 @@ namespace Puerts.UnitTest
         public void WarpTest5()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test2('1',100);
            ");
@@ -75,9 +70,8 @@ namespace Puerts.UnitTest
         public void WarpTest6()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test2('1');
            ");
@@ -88,10 +82,9 @@ namespace Puerts.UnitTest
         public void WarpTest7()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
 
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test5('1', 1, false,false,false);
            ");
@@ -103,9 +96,8 @@ namespace Puerts.UnitTest
         public void WarpTest8()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test5('1', 1, false);
            ");
@@ -118,7 +110,7 @@ namespace Puerts.UnitTest
         public void WarpTest9()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
                 const CS = require('csharp');
                 let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
@@ -134,9 +126,8 @@ namespace Puerts.UnitTest
         public void WarpTest10()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                let ret = 0;                
                try{temp.Test3('1',1);}catch(e){ret = 1;}
@@ -150,9 +141,8 @@ namespace Puerts.UnitTest
         public void WarpTest11()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                let ret = 0;                
                try{temp.Test4('1');}catch(e){ ret = 1; }
@@ -166,9 +156,8 @@ namespace Puerts.UnitTest
         public void WarpTest12()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                let ret = 0;                
                try{temp.Test4('1',1);}catch(e){ret = 1;}
@@ -181,9 +170,8 @@ namespace Puerts.UnitTest
         public void WarpTest14()
         {
             var jsEnv = new JsEnv(new TxtLoader());
-            PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv);
+            Utils.RegisterStaticWrapper(jsEnv);
             string ret = jsEnv.Eval<string>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.TestFilter('world');
            ");
@@ -196,7 +184,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test(1,3);
            ");
@@ -208,7 +195,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test('1',3);
            ");
@@ -220,7 +206,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test('1');
            ");
@@ -232,7 +217,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test(6,6,6);
            ");
@@ -245,7 +229,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test2('1',100);
            ");
@@ -258,7 +241,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test2('1');
            ");
@@ -271,7 +253,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test5('1', 1, false,false,false);
            ");
@@ -284,7 +265,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.Test5('1', 1, false);
            ");
@@ -297,7 +277,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                let ret = 0;                
                try{temp.Test3('1');}catch(e){ret = 1;}
@@ -312,7 +291,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                let ret = 0;                
                try{temp.Test3('1',1);}catch(e){ret = 1;}
@@ -327,7 +305,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                let ret = 0;                
                try{temp.Test4('1');}catch(e){ if (e.message.indexOf('invalid') != -1) ret = 1; }
@@ -342,7 +319,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                let ret = 0;                
                try{temp.Test4('1',1);}catch(e){ret = 1;}
@@ -357,7 +333,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             int ret = jsEnv.Eval<int>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();            
                let ret = temp.Test6(1);
                ret;
@@ -370,7 +345,6 @@ namespace Puerts.UnitTest
         {
             var jsEnv = new JsEnv(new TxtLoader());
             string ret = jsEnv.Eval<string>(@"
-               const CS = require('csharp');
                let temp = new CS.Puerts.UnitTest.OptionalParametersClass();
                temp.TestFilter('world');
            ");

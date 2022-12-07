@@ -8,7 +8,7 @@ public class TestClass
 {
     Callback1 callback1;
 
-    public delegate void Callback1(int str);
+    public delegate void Callback1(string str);
 
     public void AddEventCallback1(Callback1 callback1)
     {
@@ -18,7 +18,7 @@ public class TestClass
     {
         if (callback1 != null) 
         {
-            callback1(this);
+            callback1("test");
         }
     }
 }
@@ -26,14 +26,12 @@ public class TestClass
 void Start() {
     Puerts.JsEnv env = new Puerts.JsEnv();
     env.Eval(@"
-        const CS = require('csharp');
-
         const obj = new CS.TestClass();
         obj.AddEventCallback1(i => console.log(i));
         obj.Trigger();
         // 打印了obj变量
         // 虽然是JS触发的，但实际上是C#调用JS函数，完成了console.log
-    ")
+    ");
 }
 ```
 
@@ -45,12 +43,12 @@ void Start() {
 void Start() {
     Puerts.JsEnv env = new Puerts.JsEnv();
     // 这里可以直接通过 Eval 的结果获得 delegate
-    Action<int> LogInt = env.Eval<Action<int>>(@"
+    System.Action<int> LogInt = env.Eval<System.Action<int>>(@"
         const func = function(a) {
             console.log(a);
         }
         func;
-    ")
+    ");
 
     LogInt(3); // 3
 }
@@ -65,12 +63,12 @@ void Start() {
 void Start() {
     Puerts.JsEnv env = new Puerts.JsEnv();
     // 这里可以直接通过 Eval 的结果获得 delegate
-    Func<int, int> Add3 = env.Eval<Func<int, int>>(@"
+    System.Func<int, int> Add3 = env.Eval<System.Func<int, int>>(@"
         const func = function(a) {
             return 3 + a;
         }
         func;
-    ")
+    ");
 
     System.Console.WriteLine(Add3(1)); // 4
 }
@@ -83,6 +81,10 @@ void Start() {
 
 综合上面所有能力，我们很轻易地可以在 JS 里实现这个功能
 ```csharp
+using System;
+using Puerts;
+using UnityEngine;
+
 public class JsBehaviour : MonoBehaviour
 {
     public Action JsStart;
@@ -96,8 +98,6 @@ public class JsBehaviour : MonoBehaviour
         if (jsEnv == null) jsEnv = new JsEnv(new DefaultLoader(), 9229);
 
         var init = jsEnv.Eval<ModuleInit>(@"const m = 
-            const CS = require('csharp');
-
             class Rotate {
                 constructor(bindTo) {
                     this.bindTo = bindTo;

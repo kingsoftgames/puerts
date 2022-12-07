@@ -6,7 +6,7 @@
  */
 
 var global = global || globalThis || (function () { return this; }());
-    
+
 let moduleCache = Object.create(null); // key to sid
 let tmpModuleStorage = []; // sid to module
 
@@ -35,7 +35,7 @@ function executeModule(fullPath, script, debugPath, sid) {
     let wrapped = puerts.evalScript(
         // Wrap the script in the same way NodeJS does it. It is important since IDEs (VSCode) will use this wrapper pattern
         // to enable stepping through original source in-place.
-        "(function (exports, require, module, __filename, __dirname) { " + script + "\n});", 
+        "(function (exports, require, module, __filename, __dirname) { " + script + "\n});",
         debugPath
     )
     wrapped(exports, puerts.genRequire(fullDirInJs), module, fullPathInJs, fullDirInJs)
@@ -43,18 +43,22 @@ function executeModule(fullPath, script, debugPath, sid) {
 }
 
 function genRequire(requiringDir) {
+    if (requiringDir.indexOf(":") != -1) {
+        if (requiringDir.startsWith("puer:")) requiringDir = requiringDir.substr(5)
+        else { throw new Error("puer's genRequire can only support prefix with puer:"); }
+    }
     let localModuleCache = Object.create(null);
     function require(moduleName) {
         moduleName = moduleName.startsWith('./') ? moduleName.substr(2) : moduleName;
         if (moduleName in localModuleCache) return localModuleCache[moduleName].exports;
         if (moduleName in buildinModule) return buildinModule[moduleName];
-        
+
         let fullPath = puerts.searchModule(requiringDir, moduleName);
         if (!fullPath) {
             try {
                 return nodeRequire(moduleName);
-                
-            } catch(e) {
+
+            } catch (e) {
                 throw new Error("can not find " + moduleName);
             }
         }
@@ -64,11 +68,11 @@ function genRequire(requiringDir) {
             localModuleCache[moduleName] = moduleCache[key];
             return localModuleCache[moduleName].exports;
         }
-        
-        let {context, debugPath} = puerts.loadFile(fullPath);
-        const script = context;
 
-        let m = {"exports":{}};
+        let { content, debugPath } = puerts.loadFile(fullPath);
+        const script = content;
+
+        let m = { "exports": {} };
         localModuleCache[moduleName] = m;
         moduleCache[key] = m;
         let sid = addModule(m);
@@ -104,6 +108,7 @@ function registerBuildinModule(name, module) {
 }
 
 registerBuildinModule("puerts", puerts)
+registerBuildinModule('csharp', CS);
 
 puerts.genRequire = genRequire;
 
@@ -113,13 +118,12 @@ puerts.registerBuildinModule = registerBuildinModule;
 
 let nodeRequire = global.require;
 if (nodeRequire) {
-    global.require = global.puertsRequire = genRequire("");
     global.nodeRequire = nodeRequire;
-} else {
-    global.require = genRequire("");
 }
 
-function clearModuleCache () {
+global.require = puerts.require = genRequire("");
+
+function clearModuleCache() {
     tmpModuleStorage = [];
     moduleCache = Object.create(null);
     global.require.clearModuleCache();

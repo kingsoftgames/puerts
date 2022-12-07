@@ -7,9 +7,6 @@
 
 var global = global || globalThis || (function () { return this; }());
 
-let loader = global.__tgjsGetLoader();
-delete global.__tgjsGetLoader;
-
 function pathNormalize(path) {
     let reversePathFrags = path.split('/').reverse();
     let newPathFrags = [];
@@ -28,12 +25,12 @@ function pathNormalize(path) {
 
 function searchModuleInDirWithExt(dir, requiredModule) {
     var searchPath = pathNormalize(dir + '/' + requiredModule);
-    if (loader.FileExists(searchPath)) {
+    if (puer.fileExists(searchPath)) {
         return searchPath;
     }
-    
+
     searchPath = pathNormalize(dir + '/node_modules/' + requiredModule);
-    if (loader.FileExists(searchPath)) {
+    if (puer.fileExists(searchPath)) {
         return searchPath;
     }
 }
@@ -46,14 +43,17 @@ function getFileExtension(filepath) {
     }
 }
 
+
 function searchModuleInDir(dir, requiredModule) {
     if (getFileExtension(requiredModule)) {
-        return searchModuleInDirWithExt(dir, requiredModule);
+        return searchModuleInDirWithExt(dir, requiredModule)
+            || searchModuleInDirWithExt(dir, requiredModule + "/index.js")
+            || searchModuleInDirWithExt(dir, requiredModule + "/package.json");
     } else {
         return searchModuleInDirWithExt(dir, requiredModule + ".js")
-                    || searchModuleInDirWithExt(dir, requiredModule + ".cjs")
-                    || searchModuleInDirWithExt(dir, requiredModule + "/index.js")
-                    || searchModuleInDirWithExt(dir, requiredModule + "/package.json");
+            || searchModuleInDirWithExt(dir, requiredModule + ".cjs")
+            || searchModuleInDirWithExt(dir, requiredModule + "/index.js")
+            || searchModuleInDirWithExt(dir, requiredModule + "/package.json");
     }
 }
 
@@ -74,11 +74,4 @@ function searchModule(dir, requiredModule) {
     }
 }
 
-function loadFile(path) {
-    let debugPath = {};
-    var context = loader.ReadFile(path, debugPath);
-    return {context:context, debugPath:debugPath.value};
-}
-
 puerts.searchModule = searchModule;
-puerts.loadFile = loadFile;
