@@ -179,4 +179,11 @@ var global = global || (function () { return this; }());
     puerts.forceReload = forceReload;
     
     puerts.getModuleByUrl = getModuleByUrl;
+
+    // --> modified by ksg begin
+    // liangcheng: 增加获取所有module的接口
+    puerts.getAllLoadedModules = function () {
+        return moduleCache;
+    };
+    // --< end
 }(global));
