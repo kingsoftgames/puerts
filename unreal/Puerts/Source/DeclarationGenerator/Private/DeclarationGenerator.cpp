@@ -349,7 +349,14 @@ void FTypeScriptDeclarationGenerator::GenTypeScriptDeclaration(bool InGenStruct,
             auto Asset = AssetData.GetAsset();
             if (auto Blueprint = Cast<UBlueprint>(Asset))
             {
-                Gen(Blueprint->GeneratedClass);
+                if (Blueprint->GeneratedClass)
+                {
+                    Gen(Blueprint->GeneratedClass);
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("invalid blueprint: %s"), *AssetData.PackageName.ToString());
+                }
             }
             else if (auto UserDefinedEnum = Cast<UUserDefinedEnum>(Asset))
             {
@@ -601,6 +608,12 @@ void FTypeScriptDeclarationGenerator::Gen(UObject* ToGen)
     {
         return;
     }
+#if ENGINE_MAJOR_VERSION >= 5
+    if (GetNamespace(ToGen).Equals(TEXT("Engine.Transient")))
+    {
+        return;
+    }
+#endif
     if (Processed.Contains(ToGen))
         return;
     // --> modified by kg begin
@@ -1065,6 +1078,21 @@ void FTypeScriptDeclarationGenerator::GenResolvedFunctions(UStruct* Struct, FStr
     }
 }
 
+static uint32_t GetSameNameSuperCount(UStruct* InStruct)
+{
+    uint32_t SameNameParentCount = 0;
+    UStruct* Super = InStruct->GetSuperStruct();
+    while (Super)
+    {
+        if (Super->GetFName() == InStruct->GetFName())
+        {
+            ++SameNameParentCount;
+        }
+        Super = Super->GetSuperStruct();
+    }
+    return SameNameParentCount;
+}
+
 void FTypeScriptDeclarationGenerator::GenClass(UClass* Class)
 {
     if (Class->ImplementsInterface(UTypeScriptObject::StaticClass()))
@@ -1120,7 +1148,8 @@ void FTypeScriptDeclarationGenerator::GenClass(UClass* Class)
     StringBuffer << "    static StaticClass(): Class;\n";
     StringBuffer << "    static Find(OrigInName: string, Outer?: Object): " << SafeName(Class->GetName()) << ";\n";
     StringBuffer << "    static Load(InName: string): " << SafeName(Class->GetName()) << ";\n\n";
-    StringBuffer << "    __tid_" << SafeName(Class->GetName()) << "__: boolean;\n";
+    StringBuffer << FString::Printf(
+        TEXT("    __tid_%s_%d__: boolean;\n"), *SafeName(Class->GetName()), GetSameNameSuperCount(Class));
 
     StringBuffer << "}\n\n";
 
@@ -1285,7 +1314,10 @@ void FTypeScriptDeclarationGenerator::GenStruct(UStruct* Struct)
     StringBuffer << "     */\n";
     StringBuffer << "    static StaticClass(): ScriptStruct;\n";
     StringBuffer << "    static StaticStruct(): ScriptStruct;\n";
-    StringBuffer << "    private __tid_" << SafeName(Struct->GetName()) << "__: boolean;\n";
+    // https://github.com/Tencent/puerts/commit/1f6be35dbfa73572a0ffb221f788137580871c4e
+    // remove private for UClass
+    StringBuffer << FString::Printf(
+        TEXT("    __tid_%s_%d__: boolean;\n"), *SafeName(Struct->GetName()), GetSameNameSuperCount(Struct));
     StringBuffer << "}\n\n";
 
     WriteOutput(Struct, StringBuffer);
