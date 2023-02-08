@@ -15,6 +15,17 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+// --> modified by kg begin
+// songfuhao: 解决ios平台编译失败问题
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
+#endif
+#if defined(__clang__)
+//#pragma clang diagnostic pop
+#endif
+// --< end
+
 #include "asio/detail/config.hpp"
 #include "asio/detail/socket_types.hpp"
 
