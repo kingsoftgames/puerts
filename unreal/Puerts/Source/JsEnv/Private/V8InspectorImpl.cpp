@@ -377,7 +377,11 @@ bool V8InspectorClientImpl::Tick(float /* DeltaTime */)
                 v8::Context::Scope ContextScope(LocalContext);
                 v8::TryCatch TryCatch(Isolate);
 
-                MicroTasksRunner.Get(Isolate)->Call(LocalContext, LocalContext->Global(), 0, nullptr);
+                // --> modified by kg begin
+                // liangcheng: fix: 修复在安卓开启inspector后编译失败的问题
+                // MicroTasksRunner.Get(Isolate)->Call(LocalContext, LocalContext->Global(), 0, nullptr);
+                auto Ret = MicroTasksRunner.Get(Isolate)->Call(LocalContext, LocalContext->Global(), 0, nullptr);
+                // --< end
             }
         }
     }
