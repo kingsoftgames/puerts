@@ -45,6 +45,14 @@ public class JsEnv : ModuleRules
         
         PublicDefinitions.Add(ThreadSafe ? "THREAD_SAFE" : "NOT_THREAD_SAFE");
 
+        // --> modified by ksg begin
+        // songfuhao: 非 Shipping 版本默认开启 v8 调试
+        if (Target.Configuration != UnrealTargetConfiguration.Shipping)
+        {
+            PublicDefinitions.Add("WITH_INSPECTOR=1");
+        }
+        // --< end
+
         if (!FTextAsString)
         {
             PublicDefinitions.Add("PUERTS_FTEXT_AS_OBJECT");
