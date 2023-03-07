@@ -56,7 +56,12 @@ bool DefaultJSModuleLoader::CheckExists(const FString& PathIn, FString& Path, FS
     FString NormalizedPath = PathNormalize(PathIn);
     if (PlatformFile.FileExists(*NormalizedPath))
     {
-        AbsolutePath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*NormalizedPath);
+        // --> modified by kg begin
+        // chenyoumin: ConvertToAbsolutePathForExternalAppForRead 转换后路径在移动为 Pak: ... 非标准路径
+        // 非移动端 NormalizedPath 为全路径，移动端 NormalizedPath 为相对路径
+        // AbsolutePath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*NormalizedPath);
+        AbsolutePath = NormalizedPath;
+        // --< end
         Path = NormalizedPath;
         return true;
     }
