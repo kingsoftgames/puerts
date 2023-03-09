@@ -59,8 +59,11 @@ bool DefaultJSModuleLoader::CheckExists(const FString& PathIn, FString& Path, FS
         // --> modified by kg begin
         // chenyoumin: ConvertToAbsolutePathForExternalAppForRead 转换后路径在移动为 Pak: ... 非标准路径
         // 非移动端 NormalizedPath 为全路径，移动端 NormalizedPath 为相对路径
-        // AbsolutePath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*NormalizedPath);
+#if PLATFORM_ANDROID || PLATFORM_IOS
         AbsolutePath = NormalizedPath;
+#else
+        AbsolutePath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*NormalizedPath);
+#endif
         // --< end
         Path = NormalizedPath;
         return true;
