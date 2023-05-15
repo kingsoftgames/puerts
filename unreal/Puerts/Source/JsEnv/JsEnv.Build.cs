@@ -30,16 +30,15 @@ public class JsEnv : ModuleRules
 
     private bool ThreadSafe = false;
 
-    // --> modified by kg begin
-    // songfuhao: TS 逻辑中接入 FText，不再使用 string 替代
-    // private bool FTextAsString = true;
-    private bool FTextAsString = false;
-    // --< end
-
+    private bool FTextAsString = true;
+    
+    public static bool WithSourceControl = false;
+    
     public JsEnv(ReadOnlyTargetRules Target) : base(Target)
     {
         //PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         PublicDefinitions.Add("USING_IN_UNREAL_ENGINE");
+        //PublicDefinitions.Add("WITH_V8_FAST_CALL");
         
         PublicDefinitions.Add("TS_BLUEPRINT_PATH=\"/Blueprints/TypeScript/\"");
         
@@ -79,6 +78,26 @@ public class JsEnv : ModuleRules
                 bCanHotReloadField.SetValue(ContextField.GetValue(this), false);
             }
         }
+
+        bool bForceAllUFunctionInCPP = true;
+        if (bForceAllUFunctionInCPP)
+        {
+            PublicDefinitions.Add("PUERTS_FORCE_CPP_UFUNCTION=1");
+        }
+        else
+        {
+            PublicDefinitions.Add("PUERTS_FORCE_CPP_UFUNCTION=0");
+        }
+
+        bool UseWasm = true;
+        if (UseWasm)
+        {
+            PublicDefinitions.Add("WITH_WASM");
+        }
+        PublicDependencyModuleNames.AddRange(new string[]
+            {
+                "WasmCore", "Json"
+            });
 
         if (UseNodejs)
         {
@@ -491,6 +510,7 @@ public class JsEnv : ModuleRules
         {
             string V8LibraryPath = Path.Combine(LibraryPath, "Linux");
             PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libnode.so"));
+            RuntimeDependencies.Add("$(TargetOutputDir)/libnode.so.93", Path.Combine(V8LibraryPath, "libnode.so.93"));
         }
     }
 

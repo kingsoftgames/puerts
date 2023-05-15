@@ -51,7 +51,7 @@
     puerts::DefineClass<TArray<CLS>>()                                                                   \
         .Method("Add", SelectFunction(int (TArray<CLS>::*)(const CLS&), &TArray<CLS>::Add))              \
         .Method("Get", SelectFunction(CLS& (TArray<CLS>::*) (int), &TArray<CLS>::operator[]))            \
-        .Method("GetRef", SelectFunction_PtrRet(CLS& (TArray<CLS>::*) (int), &TArray<CLS>::operator[]))  \
+        .Method("GetRef", SelectFunction(CLS& (TArray<CLS>::*) (int), &TArray<CLS>::operator[]))         \
         .Method("Num", MakeFunction(&TArray<CLS>::Num))                                                  \
         .Method("Contains", MakeFunction(&TArray<CLS>::Contains<CLS>))                                   \
         .Method("FindIndex", SelectFunction(int (TArray<CLS>::*)(const CLS&) const, &TArray<CLS>::Find)) \
@@ -423,7 +423,7 @@ struct Converter<T*,
 {
     static v8::Local<v8::Value> toScript(v8::Local<v8::Context> context, T* value)
     {
-        return ::puerts::DataTransfer::FindOrAddStruct<T>(context->GetIsolate(), context, value, true);
+        return ::puerts::DataTransfer::FindOrAddStruct<T>(context->GetIsolate(), context, (void*) value, true);
     }
 
     static T* toCpp(v8::Local<v8::Context> context, const v8::Local<v8::Value>& value)

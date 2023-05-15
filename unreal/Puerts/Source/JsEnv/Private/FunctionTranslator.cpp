@@ -16,7 +16,11 @@ static TMap<FName, TMap<FName, TMap<FName, FString>>> ParamDefaultMetas;
 static TMap<FName, TMap<FName, FString>>* PC = nullptr;
 static TMap<FName, FString>* PF = nullptr;
 
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+UE_DISABLE_OPTIMIZATION
+#else
 PRAGMA_DISABLE_OPTIMIZATION
+#endif
 static void ParamDefaultMetasInit()
 {
     // PC = &ParamDefaultMetas.Add(TEXT("MainObject"));
@@ -27,7 +31,11 @@ static void ParamDefaultMetasInit()
 #include "InitParamDefaultMetas.inl"
     return;
 }
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+UE_ENABLE_OPTIMIZATION
+#else
 PRAGMA_ENABLE_OPTIMIZATION
+#endif
 
 std::once_flag ParamDefaultMetasInitFlag;
 
@@ -107,9 +115,17 @@ void FFunctionTranslator::Init(UFunction* InFunction, bool IsDelegate)
         IsStatic = InFunction->HasAnyFunctionFlags(FUNC_Static);
     }
     Arguments.clear();
+
+    SkipWorldContextInArg0 = false;
     for (TFieldIterator<PropertyMacro> It(InFunction); It && (It->PropertyFlags & CPF_Parm); ++It)
     {
         PropertyMacro* Property = *It;
+        static const FName WorldContextPinName(TEXT("__WorldContext"));
+        if (IsStatic && !InFunction->IsNative() && Property->GetFName() == WorldContextPinName && Arguments.size() == 0)
+        {
+            SkipWorldContextInArg0 = true;
+            ;
+        }
         if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
         {
             Return = FPropertyTranslator::Create(Property);
@@ -197,8 +213,7 @@ void FFunctionTranslator::Init(UFunction* InFunction, bool IsDelegate)
 
 v8::Local<v8::FunctionTemplate> FFunctionTranslator::ToFunctionTemplate(v8::Isolate* Isolate)
 {
-    v8::EscapableHandleScope HandleScope(Isolate);
-    return HandleScope.Escape(v8::FunctionTemplate::New(Isolate, Call, v8::External::New(Isolate, this)));
+    return v8::FunctionTemplate::New(Isolate, Call, v8::External::New(Isolate, this));
 }
 
 void FFunctionTranslator::Call(const v8::FunctionCallbackInfo<v8::Value>& Info)
@@ -263,9 +278,14 @@ void FFunctionTranslator::SlowCall(v8::Isolate* Isolate, v8::Local<v8::Context>&
     const v8::FunctionCallbackInfo<v8::Value>& Info, UObject* CallObject, UFunction* CallFunction, void* Params)
 {
     if (Params)
+    {
         FMemory::Memzero(Params, ParamsBufferSize);
+    }
 
-    Call_ProcessParams(Isolate, Context, Info, Params, 0);
+    if (!Call_ProcessParams(Isolate, Context, Info, Params, 0))
+    {
+        return;
+    }
 
     CallObject->UObject::ProcessEvent(CallFunction, Params);
 
@@ -426,7 +446,16 @@ void FFunctionTranslator::CallJs(v8::Isolate* Isolate, v8::Local<v8::Context>& C
     {
         Args[i] = Arguments[i]->UEToJsInContainer(Isolate, Context, Params, false);
     }
-    auto Result = JsFunction->Call(Context, This, Arguments.size(), Args);
+
+    v8::MaybeLocal<v8::Value> Result;
+    if (UNLIKELY(SkipWorldContextInArg0))
+    {
+        Result = JsFunction->Call(Context, This, Arguments.size() - 1, &Args[0] + 1);
+    }
+    else
+    {
+        Result = JsFunction->Call(Context, This, Arguments.size(), Args);
+    }
 
     if (!Result.IsEmpty())    // empty mean exception
     {
@@ -463,7 +492,9 @@ void FFunctionTranslator::CallJs(v8::Isolate* Isolate, v8::Local<v8::Context>& C
 
     FOutParmRec* NewOutParms = nullptr;
 
-    if (Stack.Node != Stack.CurrentNativeFunction)
+    const bool CallByBP = Stack.Node != Stack.CurrentNativeFunction;
+
+    if (CallByBP)
     {
 #if defined(USE_GLOBAL_PARAMS_BUFFER)
         void* Params = Buffer;
@@ -538,9 +569,31 @@ void FFunctionTranslator::CallJs(v8::Isolate* Isolate, v8::Local<v8::Context>& C
     FMemory::Memset(Args, 0, sizeof(v8::Local<v8::Value>) * Arguments.size());
     for (int i = 0; i < Arguments.size(); ++i)
     {
+        const auto Property = Arguments[i]->Property;
+        if (!CallByBP && (Property->PropertyFlags & CPF_OutParm) && Stack.OutParms)    // may be fast call
+        {
+            FOutParmRec* Out = Stack.OutParms;
+
+            while (Out->Property != Property)
+            {
+                Out = Out->NextOutParm;
+                checkSlow(Out);
+            }
+            Args[i] = Arguments[i]->UEToJs(Isolate, Context, Out->PropAddr, false);
+            continue;
+        }
         Args[i] = Arguments[i]->UEToJsInContainer(Isolate, Context, Params, false);
     }
-    auto Result = JsFunction->Call(Context, This, Arguments.size(), Args);
+
+    v8::MaybeLocal<v8::Value> Result;
+    if (UNLIKELY(SkipWorldContextInArg0))
+    {
+        Result = JsFunction->Call(Context, This, Arguments.size() - 1, &Args[0] + 1);
+    }
+    else
+    {
+        Result = JsFunction->Call(Context, This, Arguments.size(), Args);
+    }
 
     if (!Result.IsEmpty())    // empty mean exception
     {
@@ -592,8 +645,7 @@ FExtensionMethodTranslator::FExtensionMethodTranslator(UFunction* InFunction) : 
 
 v8::Local<v8::FunctionTemplate> FExtensionMethodTranslator::ToFunctionTemplate(v8::Isolate* Isolate)
 {
-    v8::EscapableHandleScope HandleScope(Isolate);
-    return HandleScope.Escape(v8::FunctionTemplate::New(Isolate, CallExtension, v8::External::New(Isolate, this)));
+    return v8::FunctionTemplate::New(Isolate, CallExtension, v8::External::New(Isolate, this));
 }
 
 void FExtensionMethodTranslator::CallExtension(const v8::FunctionCallbackInfo<v8::Value>& Info)

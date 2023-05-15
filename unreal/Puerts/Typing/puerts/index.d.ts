@@ -71,7 +71,31 @@ import { $Delegate, Class, Object } from "ue";
 
   function off(eventType: string, listener: Function): void;
 
-  function emit(eventType: string, ...args: any[]): boolean;
+    function toCPtrArray(...ab:ArrayBuffer[]) : ArrayBuffer;
+    
+    function $ref<T>(x? : T) : $Ref<T>;
+    
+    function $unref<T>(x: $Ref<T> | $InRef<T>) : T;
+    
+    function $set<T>(x: $Ref<T> | $InRef<T>, val:T) : void;
+    
+    const argv : {
+        getByIndex(index: number): Object;
+        getByName(name: string): Object;
+    }
+    
+    function merge(des: {}, src: {}): void;
+    
+    //function requestJitModuleMethod(moduleName: string, methodName: string, callback: (err: Error, result: any)=> void, ... args: any[]): void;
+    
+    /**
+     * @deprecated please use mixin instead! 
+    */
+    function makeUClass(ctor: { new(): Object }): Class;
+    
+    function blueprint<T extends {
+        new (...args:any[]): Object;
+    }>(path:string): T;
 
   function toManualReleaseDelegate<T extends (...args: any) => any>(func: T): $Delegate<T>;
 

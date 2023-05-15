@@ -28,7 +28,7 @@ if ( NOT DEFINED JS_ENGINE )
     set(JS_ENGINE v8)
 endif()
 
-set(BACKEND_ROOT ${PROJECT_SOURCE_DIR}/${JS_ENGINE})
+set(BACKEND_ROOT ${PROJECT_SOURCE_DIR}/.backends/${JS_ENGINE})
 
 set(ThirdParty ${PROJECT_SOURCE_DIR}/../../unreal/Puerts/ThirdParty)
 
@@ -47,6 +47,7 @@ include_directories(
 
 set ( PUERTS_INC
     Inc/Log.h
+    Inc/BackendEnv.h
     Inc/JSEngine.h
     Inc/V8Utils.h
     Inc/JSFunction.h
@@ -57,6 +58,7 @@ set ( PUERTS_INC
 set ( PUERTS_SRC
     Src/Puerts.cpp
     Src/Log.cpp
+    Src/BackendEnv.cpp
     Src/JSEngine.cpp
     Src/JSEngine_Eval.cpp
     Src/JSFunction.cpp
@@ -162,7 +164,8 @@ elseif ( ANDROID )
     #set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
     add_custom_command(TARGET puerts POST_BUILD
             COMMAND "${ANDROID_TOOLCHAIN_PREFIX}strip" -g -S -d --strip-debug --verbose
-            "${CMAKE_BINARY_DIR}/libpuerts.so"
+            "${CMAKE_BINARY_DIR}/libpuerts.so" -o
+            "${CMAKE_BINARY_DIR}/libpuerts.stripped.so~"
             COMMENT "Strip debug symbols done on final binary.")
 
 elseif ( APPLE )

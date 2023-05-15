@@ -137,6 +137,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PEBlueprintAsset")
     void RemoveNotExistedFunction();
 
+    void RemoveComponent(FName ComponentName);
+
     UFUNCTION(BlueprintCallable, Category = "PEBlueprintAsset")
     void AddMemberVariable(FName NewVarName, FPEGraphPinType InGraphPinType, FPEGraphTerminalType InPinValueType, int32 InLFlags,
         int32 InHFlags, int32 InLifetimeCondition);
@@ -159,9 +161,14 @@ public:
     void RemoveNotExistedMemberVariable();
 
     UFUNCTION(BlueprintCallable, Category = "PEBlueprintAsset")
+    void RemoveNotExistedComponent();
+
+    UFUNCTION(BlueprintCallable, Category = "PEBlueprintAsset")
     void Save();
 
 private:
+    TSet<FName> ComponentsAdded;
+
     TSet<FName> MemberVariableAdded;
 
     TSet<FName> FunctionAdded;

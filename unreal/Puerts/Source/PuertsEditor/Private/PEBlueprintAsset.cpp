@@ -12,7 +12,11 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "AssetToolsModule.h"
+#if (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1) || ENGINE_MAJOR_VERSION > 5
+#include "AssetRegistry/AssetRegistryModule.h"
+#else
 #include "AssetRegistryModule.h"
+#endif
 #include "FileHelpers.h"
 #include "Misc/PackageName.h"
 #include "UObject/MetaData.h"
@@ -27,29 +31,17 @@
 #include "K2Node_InputAxisEvent.h"
 #include "K2Node_InputAction.h"
 #include "K2Node_CallFunction.h"
+#include "K2Node_ComponentBoundEvent.h"
 #include "ScopedTransaction.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "TypeScriptGeneratedClass.h"
 #include "TypeScriptBlueprint.h"
 #include "utility"
 #include "PuertsModule.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Engine/SCS_Node.h"
 
 #define LOCTEXT_NAMESPACE "UPEBlueprintAsset"
-
-UClass* FindClass(const TCHAR* ClassName)
-{
-    check(ClassName);
-
-    UObject* ClassPackage = ANY_PACKAGE;
-
-    if (UClass* Result = FindObject<UClass>(ClassPackage, ClassName))
-        return Result;
-
-    if (UObjectRedirector* RenamedClassRedirector = FindObject<UObjectRedirector>(ClassPackage, ClassName))
-        return CastChecked<UClass>(RenamedClassRedirector->DestinationObject);
-
-    return nullptr;
-}
 
 DEFINE_LOG_CATEGORY_STATIC(PuertsEditorModule, Log, All);
 
@@ -899,11 +891,108 @@ void UPEBlueprintAsset::ClearParameter()
     ParameterTypes.Empty();
 }
 
+void UPEBlueprintAsset::RemoveComponent(FName ComponentName)
+{
+    auto SCS_Node = Blueprint->SimpleConstructionScript->FindSCSNode(ComponentName);
+    if (SCS_Node)
+    {
+        // from Editor\Kismet\Private\SSCSEditor.cpp: SSCSEditor::RemoveComponentNode
+        FBlueprintEditorUtils::RemoveVariableNodes(Blueprint, SCS_Node->GetVariableName());
+
+        TArray<UK2Node_ComponentBoundEvent*> EventNodes;
+        FKismetEditorUtilities::FindAllBoundEventsForComponent(Blueprint, SCS_Node->GetVariableName(), EventNodes);
+        if (EventNodes.Num() > 0)
+        {
+            for (UK2Node_ComponentBoundEvent* Node : EventNodes)
+            {
+                UE_LOG(PuertsEditorModule, Error,
+                    TEXT("The component that %s was bound to has been deleted! This node is no longer valid"), *Node->GetName());
+            }
+        }
+
+        USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
+        // Remove node from SCS tree
+        SCS->RemoveNodeAndPromoteChildren(SCS_Node);
+
+        // Clear the delegate
+        SCS_Node->SetOnNameChanged(FSCSNodeNameChanged());
+        // USceneComponent::GetDefaultSceneRootVariableName()
+        if (SCS_Node != SCS->GetDefaultSceneRootNode() && SCS_Node->ComponentTemplate != nullptr)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("NOT DefaultSceneRoot: %s"), *ComponentName.ToString());
+            const FName TemplateName = SCS_Node->ComponentTemplate->GetFName();
+            const FString RemovedName = SCS_Node->GetVariableName().ToString() + TEXT("_REMOVED_") + FGuid::NewGuid().ToString();
+
+            SCS_Node->ComponentTemplate->Modify();
+            SCS_Node->ComponentTemplate->Rename(*RemovedName, /*NewOuter =*/nullptr, REN_DontCreateRedirectors);
+
+            TArray<UObject*> ArchetypeInstances;
+            auto DestroyArchetypeInstances = [&ArchetypeInstances, &RemovedName](UActorComponent* ComponentTemplate)
+            {
+                ComponentTemplate->GetArchetypeInstances(ArchetypeInstances);
+                for (UObject* ArchetypeInstance : ArchetypeInstances)
+                {
+                    if (!ArchetypeInstance->HasAllFlags(RF_ArchetypeObject | RF_InheritableComponentTemplate))
+                    {
+                        CastChecked<UActorComponent>(ArchetypeInstance)->DestroyComponent();
+                        ArchetypeInstance->Rename(*RemovedName, nullptr, REN_DontCreateRedirectors);
+                    }
+                }
+            };
+
+            DestroyArchetypeInstances(SCS_Node->ComponentTemplate);
+
+            if (Blueprint)
+            {
+                // Children need to have their inherited component template instance of the component renamed out of the way as well
+                TArray<UClass*> ChildrenOfClass;
+                GetDerivedClasses(Blueprint->GeneratedClass, ChildrenOfClass);
+
+                for (UClass* ChildClass : ChildrenOfClass)
+                {
+                    UBlueprintGeneratedClass* BPChildClass = CastChecked<UBlueprintGeneratedClass>(ChildClass);
+
+                    if (UActorComponent* Component =
+                            (UActorComponent*) FindObjectWithOuter(BPChildClass, UActorComponent::StaticClass(), TemplateName))
+                    {
+                        Component->Modify();
+                        Component->Rename(*RemovedName, /*NewOuter =*/nullptr, REN_DontCreateRedirectors);
+
+                        DestroyArchetypeInstances(Component);
+                    }
+                }
+            }
+        }
+    }
+}
+
 void UPEBlueprintAsset::AddMemberVariable(FName NewVarName, FPEGraphPinType InGraphPinType, FPEGraphTerminalType InPinValueType,
     int32 InLFlags, int32 InHFlags, int32 InLifetimeCondition)
 {
     uint64 InFlags = (uint64) InHFlags << 32 | InLFlags;
     FEdGraphPinType PinType = ToFEdGraphPinType(InGraphPinType, InPinValueType);
+
+    if (auto ComponentClass = Cast<UClass>(PinType.PinSubCategoryObject))
+    {
+        if (Blueprint->GeneratedClass->IsChildOf<AActor>() && Blueprint->SimpleConstructionScript &&
+            PinType.PinCategory == UEdGraphSchema_K2::PC_Object &&
+            (ComponentClass == UActorComponent::StaticClass() || ComponentClass->IsChildOf<UActorComponent>()))
+        {
+            auto SCSNode = Blueprint->SimpleConstructionScript->FindSCSNode(NewVarName);
+            if (!SCSNode || SCSNode->ComponentClass != ComponentClass)
+            {
+                if (SCSNode)
+                {
+                    RemoveComponent(NewVarName);
+                }
+                USCS_Node* NewSCSNode = Blueprint->SimpleConstructionScript->CreateNode(ComponentClass, NewVarName);
+                Blueprint->SimpleConstructionScript->AddNode(NewSCSNode);
+                NeedSave = true;
+            }
+            ComponentsAdded.Add(NewVarName);
+            return;
+        }
+    }
 
     int32 VarIndex = FBlueprintEditorUtils::FindNewVariableIndex(Blueprint, NewVarName);
     if (VarIndex == INDEX_NONE)
@@ -1008,6 +1097,31 @@ void UPEBlueprintAsset::AddMemberVariableWithMetaData(FName InNewVarName, FPEGra
     NeedSave = InMetaData->Apply(Blueprint->NewVariables[VarIndex]) || NeedSave;
     if (NeedSave)
         CanChangeCheck();
+}
+
+void UPEBlueprintAsset::RemoveNotExistedComponent()
+{
+    if (IsPlaying())
+    {
+        return;
+    }
+    if (Blueprint && Blueprint->SimpleConstructionScript)
+    {
+        TArray<FName> ToDelete;
+        for (int32 i = 0; i < Blueprint->SimpleConstructionScript->GetAllNodes().Num(); i++)
+        {
+            if (!ComponentsAdded.Contains(Blueprint->SimpleConstructionScript->GetAllNodes()[i]->GetVariableName()))
+            {
+                ToDelete.Add(Blueprint->SimpleConstructionScript->GetAllNodes()[i]->GetVariableName());
+            }
+        }
+        for (auto Name : ToDelete)
+        {
+            NeedSave = true;
+            RemoveComponent(Name);
+        }
+    }
+    ComponentsAdded.Empty();
 }
 
 void UPEBlueprintAsset::RemoveNotExistedMemberVariable()
