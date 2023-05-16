@@ -55,10 +55,6 @@ public:
     v8::UniquePersistent<v8::FunctionTemplate> CachedFunctionTemplate;
 #endif
 
-#if PUERTS_REUSE_STRUCTWRAPPER_FUNCTIONTEMPLATE
-    v8::UniquePersistent<v8::FunctionTemplate> CachedFunctionTemplate;
-#endif
-
 protected:
     std::vector<std::shared_ptr<FPropertyTranslator>> Properties;
 

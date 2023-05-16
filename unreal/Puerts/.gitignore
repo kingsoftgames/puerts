@@ -6,6 +6,8 @@ Typing/ue/ue.d.ts
 Typing/ue/ue_bp.d.ts
 Typing/cpp/index.d.ts
 
+Source/CSharpParamDefaultValueMetas/obj
+
 *.a
 *.o
 *.so

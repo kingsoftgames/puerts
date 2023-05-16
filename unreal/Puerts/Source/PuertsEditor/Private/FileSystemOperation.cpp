@@ -5,7 +5,9 @@
 #include "Misc/FileHelper.h"
 // --> modified by kg begin
 // songfuhao: 解决 UE5 Linux 平台编译报错
-// #include "HAL/PlatformFilemanager.h"
+/**
+#include "HAL/PlatformFilemanager.h"
+*/
 #if (ENGINE_MAJOR_VERSION >= 5)
 #include "HAL/PlatformFileManager.h"
 #else
