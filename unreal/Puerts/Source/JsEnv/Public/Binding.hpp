@@ -8,6 +8,12 @@
 
 #pragma once
 
+// --> modified by kg begin
+// songfuhao: 解决linux平台编译失败问题
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wlogical-op-parentheses"
+// --< end
+
 #include <sstream>
 #include <tuple>
 #include <type_traits>
@@ -1514,3 +1520,8 @@ inline ClassDefineBuilder<T> DefineClass()
 }
 
 }    // namespace puerts
+
+// --> modified by kg begin
+// songfuhao: 解决linux平台编译失败问题
+#pragma GCC diagnostic pop
+// --< end
