@@ -7,6 +7,13 @@
  */
 
 #pragma once
+
+// --> modified by kg begin
+// songfuhao: 解决linux平台编译失败问题
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-partial-specialization"
+// --< end
+
 #include "wasm3.h"
 #include "m3_env.h"
 #include "WasmCommonIncludes.h"
@@ -499,3 +506,8 @@ struct wasm_link_wrapper<Ret(Args...), func>
         return InternalLink<Ret>(_module, function_name);
     }
 };
+
+// --> modified by kg begin
+// songfuhao: 解决linux平台编译失败问题
+#pragma GCC diagnostic pop
+// --< end
