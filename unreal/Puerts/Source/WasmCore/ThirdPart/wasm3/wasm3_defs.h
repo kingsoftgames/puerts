@@ -5,6 +5,11 @@
 //  Copyright © 2019 Volodymyr Shymanskyy. All rights reserved.
 //
 
+// --> modified by kg begin
+// songfuhao: 解决 Android 打包编译错误，等 Puerts 解决后移除修改
+#include "GenericPlatform/GenericPlatformCompilerPreSetup.h"
+// --< end
+
 #ifndef wasm3_defs_h
 #define wasm3_defs_h
 

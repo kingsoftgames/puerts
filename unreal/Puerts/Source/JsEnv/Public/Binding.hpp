@@ -376,11 +376,21 @@ private:
         }
     };
 
+// --> modified by kg begin
+// songfuhao: 解决 Android 打包编译错误，等 Puerts 解决后移除修改
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wlogical-op-parentheses"
+#endif
     template <typename T>
     struct ReturnConverter<T,
         typename std::enable_if<(ReturnByPointer || std::is_reference<T>::value && !std::is_const<T>::value) &&
                                 (is_objecttype<typename std::decay<T>::type>::value ||
                                     is_uetype<typename std::decay<T>::type>::value)>::type>
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+// --< end
     {
         static ValueType Convert(ContextType context, T ret)
         {
