@@ -365,7 +365,17 @@ template <typename Func, Func>
 struct wasm_link_helper;
 
 template <typename Ret, typename... Args, Ret (*func)(Args...)>
+// --> modified by kg begin
+// songfuhao: 解决 Android 打包编译错误，等 Puerts 解决后移除修改
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-partial-specialization"
+#endif
 struct wasm_link_helper<Ret(Args...), func>
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+// --< end
 {
     template <typename X>
     struct Functor;
@@ -460,7 +470,17 @@ template <typename Func, Func>
 struct wasm_link_wrapper;
 
 template <typename Ret, typename... Args, Ret (*func)(Args...)>
+// --> modified by kg begin
+// songfuhao: 解决 Android 打包编译错误，等 Puerts 解决后移除修改
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-partial-specialization"
+#endif
 struct wasm_link_wrapper<Ret(Args...), func>
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+// --< end
 {
     //为了规避malloc,暂时禁止返回值是指针的函数link
     /*template<typename T>
