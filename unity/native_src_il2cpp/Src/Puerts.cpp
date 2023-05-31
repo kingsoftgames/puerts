@@ -160,6 +160,14 @@ static void SetNativePtr(v8::Object* obj, void* ptr, void* type_id)
     DataTransfer::SetPointer(obj, type_id, 1);
 }
 
+static v8::Value* CreateJSArrayBuffer(v8::Context* context, void* Ptr, size_t Size)
+{
+    v8::Local<v8::ArrayBuffer> Ab = v8::ArrayBuffer::New(context->GetIsolate(), Size);
+    void* Buff = Ab->GetBackingStore()->Data();
+    ::memcpy(Buff, Ptr, Size);
+    return *Ab;
+}
+
 static void* _GetRuntimeObjectFromPersistentObject(v8::Local<v8::Context> Context, v8::Local<v8::Object> Obj)
 {
     auto Isolate = Context->GetIsolate();
@@ -367,6 +375,15 @@ inline static v8::Local<v8::Value> CSAnyToJsValue(v8::Isolate* Isolate, v8::Loca
         return Ret;
     }
     
+    jsVal = GUnityExports.TryTranslateValueType(*Context, Obj);
+    
+    if (jsVal)
+    {
+        v8::Local<v8::Value> Ret;
+        memcpy(static_cast<void*>(&Ret), &jsVal, sizeof(jsVal));
+        return Ret;
+    }
+    
     return CSRefToJsValue(Isolate, Context, Obj);
 }
 
@@ -375,6 +392,11 @@ inline static v8::Local<v8::Value> CopyValueType(v8::Isolate* Isolate, v8::Local
     void* buff =  GUnityExports.ObjectAllocate(TypeId); //TODO: allc by jsenv
     memcpy(buff, Ptr, SizeOfValueType);
     return DataTransfer::FindOrAddCData(Isolate, Context, TypeId, buff, false);
+}
+inline static v8::Local<v8::Value> CopyNullableValueType(v8::Isolate* Isolate, v8::Local<v8::Context> Context, const void* TypeId, const void* Ptr, bool hasValue, size_t SizeOfValueType)
+{
+    if (!hasValue) return v8::Null(Isolate);
+    return CopyValueType(Isolate, Context, TypeId, Ptr, SizeOfValueType);
 }
 
 inline static const void* GetTypeId(v8::Local<v8::Object> Obj)
@@ -952,14 +974,17 @@ static void SetParamArrayFlagAndOptionalNum(puerts::WrapData* data, const char* 
     }
 }
 
-V8_EXPORT puerts::WrapData* AddConstructor(puerts::JsClassInfo* classInfo, const char* signature, void* method, puerts::MethodPointer methodPointer, int typeInfoNum)
+V8_EXPORT puerts::WrapFuncPtr FindWrapFunc(const char* signature)
 {
-    //puerts::PLog("ctor %s -> %s", classInfo->Name.c_str(), signature);
-    puerts::WrapFuncPtr WrapFunc = puerts::FindWrapFunc(signature);
-    if (!WrapFunc)
-    {
-        WrapFunc = puerts::GUnityExports.ReflectionWrapper;
-    }
+    if (signature == nullptr)
+        return puerts::GUnityExports.ReflectionWrapper;
+    else 
+        return puerts::FindWrapFunc(signature);
+}
+
+V8_EXPORT puerts::WrapData* AddConstructor(puerts::JsClassInfo* classInfo, const char* signature, puerts::WrapFuncPtr WrapFunc, void* method, puerts::MethodPointer methodPointer, int typeInfoNum)
+{
+    // puerts::PLog(puerts::LogLevel::Log, "ctor %s -> %s", classInfo->Name.c_str(), signature);
     if (!WrapFunc) return nullptr;
     int allocSize = sizeof(puerts::WrapData) + sizeof(void*) * typeInfoNum;
     puerts::WrapData* data = (puerts::WrapData*)malloc(allocSize);
@@ -975,13 +1000,8 @@ V8_EXPORT puerts::WrapData* AddConstructor(puerts::JsClassInfo* classInfo, const
     return data;
 }
 
-V8_EXPORT puerts::WrapData* AddMethod(puerts::JsClassInfo* classInfo, const char* signature, const char* name, bool isStatic, bool isExtensionMethod, bool isGetter, bool isSetter, void* method, puerts::MethodPointer methodPointer, int typeInfoNum)
+V8_EXPORT puerts::WrapData* AddMethod(puerts::JsClassInfo* classInfo, const char* signature, puerts::WrapFuncPtr WrapFunc, const char* name, bool isStatic, bool isExtensionMethod, bool isGetter, bool isSetter, void* method, puerts::MethodPointer methodPointer, int typeInfoNum)
 {
-    puerts::WrapFuncPtr WrapFunc = puerts::FindWrapFunc(signature);
-    if (!WrapFunc)
-    {
-        WrapFunc = puerts::GUnityExports.ReflectionWrapper;
-    }
     if (!WrapFunc) return nullptr;
     int allocSize = sizeof(puerts::WrapData) + sizeof(void*) * typeInfoNum;
     puerts::WrapData* data = (puerts::WrapData*)malloc(allocSize);
@@ -1015,9 +1035,27 @@ V8_EXPORT puerts::WrapData* AddMethod(puerts::JsClassInfo* classInfo, const char
     return data;
 }
 
-V8_EXPORT bool AddField(puerts::JsClassInfo* classInfo, const char* signature, const char* name, bool is_static, void* fieldInfo, int offset, void* fieldTypeInfo)
+static puerts::FieldWrapFuncInfo *ReflectionFuncWrap = nullptr;
+V8_EXPORT puerts::FieldWrapFuncInfo* FindFieldWrap(const char* signature)
 {
-    puerts::FieldWrapFuncInfo* wrapFuncInfo = puerts::FindFieldWrapFuncInfo(signature);
+    if (signature == nullptr)
+    {
+        if (ReflectionFuncWrap == nullptr)
+        {
+            ReflectionFuncWrap = new puerts::FieldWrapFuncInfo();
+            ReflectionFuncWrap->Getter = puerts::GUnityExports.ReflectionGetFieldWrapper;
+            ReflectionFuncWrap->Setter = puerts::GUnityExports.ReflectionSetFieldWrapper;
+        }
+        
+        return ReflectionFuncWrap;
+    }
+
+    else 
+        return puerts::FindFieldWrapFuncInfo(signature);
+}
+
+V8_EXPORT bool AddField(puerts::JsClassInfo* classInfo, puerts::FieldWrapFuncInfo* wrapFuncInfo, const char* name, bool is_static, void* fieldInfo, int offset, void* fieldTypeInfo)
+{
     puerts::FieldWrapFuncPtr Getter = nullptr;
     puerts::FieldWrapFuncPtr Setter = nullptr;
     if (wrapFuncInfo) 
@@ -1026,11 +1064,6 @@ V8_EXPORT bool AddField(puerts::JsClassInfo* classInfo, const char* signature, c
         Setter = wrapFuncInfo->Setter;
     }
     else
-    {
-        Getter = puerts::GUnityExports.ReflectionGetFieldWrapper;
-        Setter = puerts::GUnityExports.ReflectionSetFieldWrapper;
-    }
-    if (!Getter && !Setter)
     {
         return false;
     }
@@ -1179,6 +1212,7 @@ V8_EXPORT bool RegisterCSharpType(puerts::JsClassInfo* classInfo)
 V8_EXPORT void ExchangeAPI(puerts::UnityExports * exports)
 {
     exports->SetNativePtr = &puerts::SetNativePtr;
+    exports->CreateJSArrayBuffer = &puerts::CreateJSArrayBuffer;
     exports->UnrefJsObject = &puerts::UnrefJsObject;
     exports->FunctionToDelegate = &puerts::FunctionToDelegate_pesapi;
     exports->SetPersistentObject = &puerts::SetPersistentObject;

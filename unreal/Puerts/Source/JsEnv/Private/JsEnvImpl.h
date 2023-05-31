@@ -42,7 +42,7 @@
 #pragma warning(pop)
 #endif
 
-#if WITH_WASM
+#if USE_WASM3
 #include "WasmRuntime.h"
 #include "PuertsWasm/WasmJsFunctionParams.h"
 #endif
@@ -228,7 +228,7 @@ public:
 
     void InvokeMixinMethod(UObject* ContextObject, UJSGeneratedFunction* Function, FFrame& Stack, void* RESULT_PARAM);
 
-    void TypeScriptInitial(UClass* Class, UObject* Object);
+    void TypeScriptInitial(UClass* Class, UObject* Object, const bool TypeScriptClassFound = false);
 
     void InvokeTsMethod(UObject* ContextObject, UFunction* Function, FFrame& Stack, void* RESULT_PARAM);
 
@@ -422,9 +422,19 @@ private:
 
     friend ObjectMerger;
 
-#if WITH_WASM
-    std::shared_ptr<WasmRuntime> PuertsWasmRuntime;
-    TArray<WasmJsModuleDesc> AllWasmJsModuleDesc;
+#if USE_WASM3
+    std::shared_ptr<WasmEnv> PuertsWasmEnv;
+    //在执行module.instance的时候,如果有指定memory,那么这个module对应会创建一个runtime
+    TArray<std::shared_ptr<WasmRuntime>> PuertsWasmRuntimeList;
+    TArray<WasmNormalLinkInfo*> PuertsWasmCachedLinkFunctionList;
+
+protected:
+    void Wasm_NewMemory(const v8::FunctionCallbackInfo<v8::Value>& Info);
+    void Wasm_MemoryGrowth(const v8::FunctionCallbackInfo<v8::Value>& Info);
+    void Wasm_MemoryBuffer(const v8::FunctionCallbackInfo<v8::Value>& Info);
+    void Wasm_Instance(const v8::FunctionCallbackInfo<v8::Value>& Info);
+    void Wasm_OverrideWebAssembly(const v8::FunctionCallbackInfo<v8::Value>& Info);
+
 #endif
 
 public:

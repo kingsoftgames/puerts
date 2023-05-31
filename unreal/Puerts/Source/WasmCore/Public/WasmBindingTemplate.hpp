@@ -7,13 +7,6 @@
  */
 
 #pragma once
-
-// --> modified by kg begin
-// songfuhao: 解决linux平台编译失败问题
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-partial-specialization"
-// --< end
-
 #include "wasm3.h"
 #include "m3_env.h"
 #include "WasmCommonIncludes.h"
@@ -361,21 +354,11 @@ typename std::enable_if<wasm_is_complex_type<T>::value, int>::type wasm_link_get
     return 0;
 }
 
-template <typename Func, Func>
+template <typename Func, Func* func>
 struct wasm_link_helper;
 
 template <typename Ret, typename... Args, Ret (*func)(Args...)>
-// --> modified by kg begin
-// songfuhao: 解决 Android 打包编译错误，等 Puerts 解决后移除修改
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-partial-specialization"
-#endif
 struct wasm_link_helper<Ret(Args...), func>
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-// --< end
 {
     template <typename X>
     struct Functor;
@@ -466,21 +449,11 @@ struct wasm_link_helper<Ret(Args...), func>
     };
 };
 
-template <typename Func, Func>
+template <typename Func, Func* func>
 struct wasm_link_wrapper;
 
 template <typename Ret, typename... Args, Ret (*func)(Args...)>
-// --> modified by kg begin
-// songfuhao: 解决 Android 打包编译错误，等 Puerts 解决后移除修改
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-partial-specialization"
-#endif
 struct wasm_link_wrapper<Ret(Args...), func>
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-// --< end
 {
     //为了规避malloc,暂时禁止返回值是指针的函数link
     /*template<typename T>
@@ -526,8 +499,3 @@ struct wasm_link_wrapper<Ret(Args...), func>
         return InternalLink<Ret>(_module, function_name);
     }
 };
-
-// --> modified by kg begin
-// songfuhao: 解决linux平台编译失败问题
-#pragma GCC diagnostic pop
-// --< end
