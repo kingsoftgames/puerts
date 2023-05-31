@@ -8,12 +8,6 @@
 
 #pragma once
 
-// --> modified by kg begin
-// songfuhao: ½â¾ölinuxÆ½Ì¨±àÒëÊ§°ÜÎÊÌâ
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wlogical-op-parentheses"
-// --< end
-
 #include <sstream>
 #include <tuple>
 #include <type_traits>
@@ -376,21 +370,11 @@ private:
         }
     };
 
-// --> modified by kg begin
-// songfuhao: è§£å†³ Android æ‰“åŒ…ç¼–è¯‘é”™è¯¯ï¼Œç­‰ Puerts è§£å†³åç§»é™¤ä¿®æ”¹
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wlogical-op-parentheses"
-#endif
     template <typename T>
     struct ReturnConverter<T,
         typename std::enable_if<(ReturnByPointer || (std::is_reference<T>::value && !std::is_const<T>::value)) &&
                                 (is_objecttype<typename std::decay<T>::type>::value ||
                                     is_uetype<typename std::decay<T>::type>::value)>::type>
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-// --< end
     {
         static ValueType Convert(ContextType context, T ret)
         {
@@ -1530,8 +1514,3 @@ inline ClassDefineBuilder<T> DefineClass()
 }
 
 }    // namespace puerts
-
-// --> modified by kg begin
-// songfuhao: ½â¾ölinuxÆ½Ì¨±àÒëÊ§°ÜÎÊÌâ
-#pragma GCC diagnostic pop
-// --< end
