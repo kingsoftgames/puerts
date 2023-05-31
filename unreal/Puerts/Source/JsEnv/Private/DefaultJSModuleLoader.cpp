@@ -69,25 +69,20 @@ bool DefaultJSModuleLoader::SearchModuleInDir(
 {
     FString Extension = FPaths::GetExtension(RequiredModule);
     bool IsJs = Extension == TEXT("js") || Extension == TEXT("mjs") || Extension == TEXT("cjs") || Extension == TEXT("json");
-    if (Extension == TEXT("") || !IsJs)
-    {
-        return SearchModuleWithExtInDir(Dir, RequiredModule + ".js", Path, AbsolutePath) ||
-               SearchModuleWithExtInDir(Dir, RequiredModule + ".mjs", Path, AbsolutePath) ||
-               SearchModuleWithExtInDir(Dir, RequiredModule + ".cjs", Path, AbsolutePath) ||
-               // --> modified by kg begin
-               // songfuhao: 调整 index.js 与 package.json 的加载顺序，保证第三方 module 的正常调用
-               /**
-               SearchModuleWithExtInDir(Dir, RequiredModule / "package.json", Path, AbsolutePath) ||
-               SearchModuleWithExtInDir(Dir, RequiredModule / "index.js", Path, AbsolutePath);
-               */
-               // --< end
-               SearchModuleWithExtInDir(Dir, RequiredModule / "index.js", Path, AbsolutePath) ||
-               SearchModuleWithExtInDir(Dir, RequiredModule / "package.json", Path, AbsolutePath);
-    }
-    else
-    {
-        return SearchModuleWithExtInDir(Dir, RequiredModule, Path, AbsolutePath);
-    }
+    if (IsJs && SearchModuleWithExtInDir(Dir, RequiredModule, Path, AbsolutePath))
+        return true;
+    return SearchModuleWithExtInDir(Dir, RequiredModule + ".js", Path, AbsolutePath) ||
+            SearchModuleWithExtInDir(Dir, RequiredModule + ".mjs", Path, AbsolutePath) ||
+            SearchModuleWithExtInDir(Dir, RequiredModule + ".cjs", Path, AbsolutePath) ||
+            // --> modified by kg begin
+            // songfuhao: 调整 index.js 与 package.json 的加载顺序，保证第三方 module 的正常调用
+            /**
+            SearchModuleWithExtInDir(Dir, RequiredModule / "package.json", Path, AbsolutePath) ||
+            SearchModuleWithExtInDir(Dir, RequiredModule / "index.js", Path, AbsolutePath);
+            */
+            // --< end
+            SearchModuleWithExtInDir(Dir, RequiredModule / "index.js", Path, AbsolutePath) ||
+            SearchModuleWithExtInDir(Dir, RequiredModule / "package.json", Path, AbsolutePath);
 }
 
 bool DefaultJSModuleLoader::SearchModuleWithExtInDir(

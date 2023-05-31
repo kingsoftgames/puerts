@@ -357,7 +357,7 @@ void FTypeScriptDeclarationGenerator::GenTypeScriptDeclaration(bool InGenStruct,
             auto Asset = AssetData.GetAsset();
             if (auto Blueprint = Cast<UBlueprint>(Asset))
             {
-                if (Blueprint->GeneratedClass)
+                if (Blueprint->Status != BS_Error && Blueprint->GeneratedClass)
                 {
                     Gen(Blueprint->GeneratedClass);
                 }
@@ -647,7 +647,8 @@ void FTypeScriptDeclarationGenerator::Gen(UObject* ToGen)
     }
     // --< end
 
-    if (ToGen->GetName().Equals(TEXT("ArrayBuffer")) || ToGen->GetName().Equals(TEXT("JsObject")))
+    if (ToGen->GetName().Equals(TEXT("ArrayBuffer")) || ToGen->GetName().Equals(TEXT("ArrayBufferValue")) ||
+        ToGen->GetName().Equals(TEXT("JsObject")))
     {
         return;
     }
@@ -767,7 +768,8 @@ bool FTypeScriptDeclarationGenerator::GenTypeDecl(FStringBuffer& StringBuffer, P
     }
     else if (auto StructProperty = CastFieldMacro<StructPropertyMacro>(Property))
     {
-        if (StructProperty->Struct->GetName() != TEXT("ArrayBuffer") && StructProperty->Struct->GetName() != TEXT("JsObject"))
+        if (StructProperty->Struct->GetName() != TEXT("ArrayBuffer") &&
+            StructProperty->Struct->GetName() != TEXT("ArrayBufferValue") && StructProperty->Struct->GetName() != TEXT("JsObject"))
         {
             const FString& Name = GetNameWithNamespace(StructProperty->Struct);
             const TArray<FString>& IgnoreStructListOnDTS = IPuertsModule::Get().GetIgnoreStructListOnDTS();
@@ -785,7 +787,8 @@ bool FTypeScriptDeclarationGenerator::GenTypeDecl(FStringBuffer& StringBuffer, P
         {
             StringBuffer << "object";
         }
-        else if (StructProperty->Struct->GetName() == TEXT("ArrayBuffer"))
+        else if (StructProperty->Struct->GetName() == TEXT("ArrayBuffer") ||
+                 StructProperty->Struct->GetName() == TEXT("ArrayBufferValue"))
         {
             StringBuffer << "ArrayBuffer";
         }
@@ -887,6 +890,12 @@ bool FTypeScriptDeclarationGenerator::GenTypeDecl(FStringBuffer& StringBuffer, P
         AddToGen.Add(LazyObjectProperty->PropertyClass);
         StringBuffer << "TLazyObjectPtr<" << GetNameWithNamespace(LazyObjectProperty->PropertyClass) << ">";
     }
+#if ENGINE_MINOR_VERSION >= 25 || ENGINE_MAJOR_VERSION > 4
+    else if (CastField<FFieldPathProperty>(Property))
+    {
+        StringBuffer << "string";
+    }
+#endif
     else
     {
         return false;
@@ -1311,6 +1320,18 @@ void FTypeScriptDeclarationGenerator::GenStruct(UStruct* Struct)
     }
 
     StringBuffer << " {\n";
+
+    if (const auto UserDefinedStruct = Cast<UUserDefinedStruct>(Struct))
+    {
+        if (UserDefinedStruct->Status == UDSS_Error)
+        {
+            UE_LOG(LogTemp, Error, TEXT("User Defined Struct %s has error:%s"), *UserDefinedStruct->GetName(),
+                *UserDefinedStruct->ErrorMessage);
+            StringBuffer << "}\n\n";
+            WriteOutput(Struct, StringBuffer);
+            return;
+        }
+    }
 
     auto GenConstrutor = [&]()
     {
