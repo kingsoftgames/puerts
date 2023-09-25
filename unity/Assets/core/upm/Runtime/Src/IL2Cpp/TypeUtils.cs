@@ -35,7 +35,7 @@ namespace PuertsIl2cpp
         public static IEnumerable<MethodInfo> GetExtensionMethods(Type type, params Type[] extensions)
         {
             return from e in extensions from m in e.GetMethods(BindingFlags.Static | BindingFlags.Public) 
-                where GetExtendedType(m) == type select m;
+                where !m.IsSpecialName && GetExtendedType(m) == type select m;
         }
 
         public static IEnumerable<MethodInfo> Get(Type type)
@@ -80,6 +80,7 @@ namespace PuertsIl2cpp
             public static string Float = "r4";
             public static string IntPtr = "p";
             public static string String = "s";
+            public static string ArrayBuffer = "a";
             public static string SystemObject = "O";
             public static string RefOrPointerPrefix = "P";
             public static string Object = "o";
@@ -144,7 +145,15 @@ namespace PuertsIl2cpp
             }
             foreach (var field in type.GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
-                sb.Append(GetTypeSignature(field.FieldType));
+                // special handling circular definition by pointer
+                if (
+                    (field.FieldType.IsByRef || field.FieldType.IsPointer) &&
+                    field.FieldType.GetElementType() == type
+                ) {
+                    sb.Append("Pv");
+                } 
+                else
+                    sb.Append(GetTypeSignature(field.FieldType));
             }
             return sb.ToString();
         }
@@ -202,6 +211,10 @@ namespace PuertsIl2cpp
             else if (type == typeof(float))
             {
                 return TypeSignatures.Float;
+            }
+            else if (type == typeof(Puerts.ArrayBuffer))
+            {
+                return TypeSignatures.ArrayBuffer;
             }
             else if (type == typeof(IntPtr) || type == typeof(UIntPtr))
             {

@@ -57,7 +57,7 @@ namespace NUnit {
                     }
                     return;
                 }
-                throw new Exception($"expect an error but tbe code did not thrown any");
+                throw new Exception($"expect an error but the code did not thrown any");
             }
             // public static void Contains(object a, ICollection b)
             // {
@@ -76,6 +76,20 @@ namespace NUnit {
                         throw new Exception($"expect {a} == {b} but failed");
                 } 
                 else if (a != b) throw new Exception($"expect {a} == {b} but failed");
+            }
+            public static void AreNotEqual(object a, object b) 
+            {
+                Type aType = a.GetType();
+                Type bType = b.GetType();
+                if (
+                    (aType.IsPrimitive || aType == typeof(string)) &&
+                    (bType.IsPrimitive || bType == typeof(string))
+                )
+                {
+                    if (a.ToString() == b.ToString()) 
+                        throw new Exception($"expect {a} != {b} but failed");
+                } 
+                else if (a == b) throw new Exception($"expect {a} != {b} but failed");
             }
 
             public static void True(bool b)

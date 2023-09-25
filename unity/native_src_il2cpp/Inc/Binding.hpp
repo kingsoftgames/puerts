@@ -1260,6 +1260,7 @@ struct PropertyWrapper<Ret*, Variable>
     }
 };
 
+#if USING_IN_UNREAL_ENGINE
 template <typename T>
 class ClassDefineBuilder
 {
@@ -1511,5 +1512,5 @@ inline ClassDefineBuilder<T> DefineClass()
     static auto NameLiteral = ScriptTypeName<T>::value();
     return ClassDefineBuilder<T>(NameLiteral.Data());
 }
-
+#endif
 }    // namespace puerts

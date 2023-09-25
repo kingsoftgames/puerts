@@ -46,7 +46,17 @@ namespace Puerts
 
         internal readonly JSObjectFactory jsObjectFactory;
 
+        internal readonly GenericDelegate JSObjectValueGetter;
+
+        internal GenericDelegate ModuleExecutor;
+
         internal IntPtr isolate;
+
+        public IntPtr Isolate {
+            get {
+                return isolate;
+            }
+        }
 
         internal ObjectPool objectPool;
 
@@ -54,9 +64,6 @@ namespace Puerts
         private bool loaderCanCheckESM;
 
         public Backend Backend;
-
-        private Func<string, JSObject> moduleExecuter;
-        private delegate T JSOGetter<T>(JSObject jso, string s);
 
 #if UNITY_EDITOR
         public delegate void JsEnvCreateCallback(JsEnv env, ILoader loader, int debugPort);
@@ -88,7 +95,7 @@ namespace Puerts
 
         public JsEnv(ILoader loader, int debugPort, IntPtr externalRuntime, IntPtr externalContext)
         {
-            const int libVersionExpect = 31;
+            const int libVersionExpect = 32;
             int libVersion = PuertsDLL.GetApiLevel();
             if (libVersion != libVersionExpect)
             {
@@ -154,44 +161,7 @@ namespace Puerts
             PuertsDLL.SetGlobalFunction(isolate, "__tgjsLoadType", StaticCallbacks.JsEnvCallbackWrap, AddCallback(LoadType));
             PuertsDLL.SetGlobalFunction(isolate, "__tgjsGetNestedTypes", StaticCallbacks.JsEnvCallbackWrap, AddCallback(GetNestedTypes));
             PuertsDLL.SetGlobalFunction(isolate, "__tgjsGetLoader", StaticCallbacks.JsEnvCallbackWrap, AddCallback(GetLoader));
-
-            Eval(PathHelper.JSCode + @"
-                var global = this;
-                (function() {
-                    var loader = __tgjsGetLoader();
-                    global.__puer_resolve_module_url__ = function(specifier, referer) {
-                        const originSp = specifier;
-                        if (!loader.Resolve) {
-                            let s = !__puer_path__.isRelative(specifier) ? specifier : __puer_path__.normalize(__puer_path__.dirname(referer) + '/' + specifier)
-                            if (loader.FileExists(s)) {
-                                return s
-                            } else {
-                                throw new Error(`[Puer002]module not found in js: ${originSp}`);
-                            }
-
-                        } else {
-                            let p = loader.Resolve(specifier, referer)
-                            if (!p) {
-                                throw new Error(`[Puer002]module not found: ${originSp}`);
-                            }
-                            return p;
-                        }
-                    }
-                    global.__puer_resolve_module_content__ = function(specifier) {
-                        const debugpathRef = [], contentRef = [];
-                        const originSp = specifier;
-
-                        const content = loader.ReadFile(specifier, debugpathRef);                    
-                        if (!content) {
-                            throw new Error(`[Puer003]module not found: ${originSp}`);
-                        }
-                        return content
-                    }
-                })();
-            ");
             
-            moduleExecuter = Eval<Func<string, JSObject>>("__puer_execute_module_sync__");
-
             //可以DISABLE掉自动注册，通过手动调用PuertsStaticWrap.AutoStaticCodeRegister.Register(jsEnv)来注册
 #if !DISABLE_AUTO_REGISTER
             const string AutoStaticCodeRegisterClassName = "PuertsStaticWrap.PuerRegisterInfo_Gen";
@@ -211,6 +181,21 @@ namespace Puerts
             }
 #endif
             TypeManager.InitArrayTypeId();
+
+#if THREAD_SAFE
+            lock (this)
+            {
+#endif
+            var ptr = PuertsDLL.GetJSObjectValueGetter(isolate);
+            if (ptr == IntPtr.Zero)
+            {
+                string exceptionInfo = PuertsDLL.GetLastExceptionInfo(isolate);
+                throw new Exception(exceptionInfo);
+            }
+            JSObjectValueGetter = new GenericDelegate(ptr, this);
+#if THREAD_SAFE
+            }
+#endif
 
             if (debugPort != -1)
             {
@@ -262,6 +247,7 @@ namespace Puerts
             }
             if (loader is IBuiltinLoadedListener)
                 (loader as IBuiltinLoadedListener).OnBuiltinLoaded(this);
+
         }
 
         internal string ResolveModuleContent(string identifer, out string pathForDebug) 
@@ -300,13 +286,33 @@ namespace Puerts
             if (exportee == "" && typeof(T) != typeof(JSObject)) {
                 throw new Exception("T must be Puerts.JSObject when getting the module namespace");
             }
-            JSObject jso = moduleExecuter(specifier);
-            JSOGetter<T> getter = Eval<JSOGetter<T>>("(function (jso, str) { return jso[str]; });");
-            return getter(jso, exportee);
+            if (ModuleExecutor == null)
+            {
+                var ptr = PuertsDLL.GetModuleExecutor(isolate);
+                if (ptr == IntPtr.Zero)
+                {
+                    string exceptionInfo = PuertsDLL.GetLastExceptionInfo(isolate);
+                    throw new Exception(exceptionInfo);
+                }
+                ModuleExecutor = new GenericDelegate(ptr, this);
+            }
+            JSObject jso = ModuleExecutor.Func<string, JSObject>(specifier);
+            
+            return jso.Get<T>(exportee);
         }
         public JSObject ExecuteModule(string specifier)
         {
-            return moduleExecuter(specifier);
+            if (ModuleExecutor == null)
+            {
+                var ptr = PuertsDLL.GetModuleExecutor(isolate);
+                if (ptr == IntPtr.Zero)
+                {
+                    string exceptionInfo = PuertsDLL.GetLastExceptionInfo(isolate);
+                    throw new Exception(exceptionInfo);
+                }
+                ModuleExecutor = new GenericDelegate(ptr, this);
+            }
+            return ModuleExecutor.Func<string, JSObject>(specifier);
         }
 
         public void Eval(string chunk, string chunkName = "chunk")
@@ -544,16 +550,17 @@ namespace Puerts
                     if (PuertsDLL.GetJsValueType(isolate, value, false) != JsValueType.Function) 
                     {
                         throw new Exception("invalid Type for generic arguments " + (i - 2));
-                    };
+                    }
                     var argTypeId = PuertsDLL.GetTypeIdFromValue(isolate, value, false);
                     if (argTypeId == -1) 
                     {
                         throw new Exception("invalid Type for generic arguments " + (i - 2));
-                    };
+                    }
                     genericArguments[i - 2] = TypeManager.GetType(argTypeId);
                 }
 
-                PuertsDLL.ReturnCSharpFunctionCallback(isolate, info, StaticCallbacks.JsEnvCallbackWrap, AddCallback(new GenericMethodWrap(methodName, this, type, genericArguments).Invoke));
+                var callbackID = AddCallback(new GenericMethodWrap(methodName, this, type, genericArguments).Invoke);
+                PuertsDLL.ReturnCSharpFunctionCallback(isolate, info, StaticCallbacks.JsEnvCallbackWrap, callbackID);
             }
             catch(Exception e)
             {
@@ -888,11 +895,10 @@ namespace Puerts
             lock (funcRefCount)
             {
                 pendingRemovedList.Clear();
-                var funcRefKeyList = funcRefCount.Keys.ToList();
-                for (int i = 0, l = funcRefKeyList.Count; i < l; i++)
+                var enumerator = funcRefCount.GetEnumerator();
+                while (enumerator.MoveNext())
                 {
-                    var k = funcRefKeyList[i];
-                    if (funcRefCount[k] <= 0) pendingRemovedList.Add(k);
+                    if (enumerator.Current.Value <= 0) pendingRemovedList.Add(enumerator.Current.Key);
                 }
                 for(int i = 0; i  < pendingRemovedList.Count; ++i)
                 {
@@ -915,11 +921,10 @@ namespace Puerts
             lock (JSObjRefCount)
             {
                 pendingRemovedJsObjList.Clear();
-                var JSObjRefKeyList = JSObjRefCount.Keys.ToList();
-                for (int i = 0, l = JSObjRefKeyList.Count; i < l; i++)
+                var enumerator = JSObjRefCount.GetEnumerator();
+                while (enumerator.MoveNext())
                 {
-                    var k = JSObjRefKeyList[i];
-                    if (JSObjRefCount[k] <= 0) pendingRemovedList.Add(k);
+                    if (enumerator.Current.Value <= 0) pendingRemovedJsObjList.Add(enumerator.Current.Key);
                 }
                 for(int i = 0; i  < pendingRemovedJsObjList.Count; ++i)
                 {

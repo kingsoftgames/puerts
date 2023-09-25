@@ -60,10 +60,17 @@ set ( PUERTS_SRC
     Src/Log.cpp
     Src/BackendEnv.cpp
     Src/JSEngine.cpp
-    Src/JSEngine_Eval.cpp
     Src/JSFunction.cpp
     ${PROJECT_SOURCE_DIR}/../../unreal/Puerts/Source/JsEnv/Private/V8InspectorImpl.cpp
 )
+
+if(DEFINED PUERTS_EXTRA_SRC)
+    list(APPEND PUERTS_SRC ${PUERTS_EXTRA_SRC})
+endif()
+
+if(DEFINED PUERTS_EXTRA_INC)
+    include_directories(${PUERTS_EXTRA_INC})
+endif()
 
 macro(source_group_by_dir proj_dir source_files)
     if(MSVC OR APPLE)
@@ -100,10 +107,13 @@ if ( APPLE )
             set(CMAKE_OSX_ARCHITECTURES arm64)
         endif ()
         
-        set(CMAKE_SKIP_RPATH FALSE)    
-        add_link_options(-rpath "@loader_path/")
         add_library(puerts SHARED
             ${PUERTS_SRC} ${PUERTS_INC}
+        )
+        target_link_options(
+            puerts 
+            PRIVATE "-Wl,-rpath,@loader_path/${CMAKE_OSX_ARCHITECTURES}/"
+            PRIVATE "-Wl,-rpath,@loader_path/"
         )
     endif ()
 else ()

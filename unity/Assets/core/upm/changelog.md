@@ -6,6 +6,58 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 you can get the english version change log at [Github Release](https://github.com/Tencent/puerts/releases)
 
+## [2.0.2] - 2023-09-07
+1. fix: defaultParam's value is not as expected when StaticWrapper in generated @ctxdegithub
+2. fix: could not build puerts with v8_8.4. In Unity2020-, the xil2cpp mode binary with v8_9.4 of android armv7 may not work. #1469
+3. optimize: combine `libwee8.a` and `libpuerts.a` in android for xil2cpp mode @mingxxming
+4. optimize: use universal binary instead of two binary with different arch in OSX now. @mikejurka
+5. optimize: `JsEnv` now have a public `Isolate` field to get the pointer of `v8::Isolate` @mingxxming
+6. optimize: remove our `SnapshotBlob.h`. Use v8's builtin snapshot instead. #1477
+7. optimize: The build script can now run with low Node.js version @xiezheng-XD #1495
+8. optimize: support inspector by default in Linux @geequlim
+
+## [2.0.1] - 2023-08-16
+1. Fix: NestedType was not declared correctly in `link.xml` #1460
+2. Fix: `out` parameters with ValueType might cause crash in xil2cpp mode. #1460
+3. Fix: default value of parameters in extension method was not correct in xil2cpp mode #1456
+4. Fix: JSObject was not recycle correctly
+
+## [2.0.0] - 2023-07-31
+1. Fix: `debugpath` was not work and make VSCode debug not availabled
+2. Fix: `puer.$genericMethod` cannot get the genericMethod from super class in xil2cpp mode #1417 @danij91
+3. Fix: `GetFriendlyName is not a function` when generating extensionInfo #1437
+
+This is the first stable version of `2.0.0`. Shout out to everyone who attending the test.
+
+If you need any help in upgrading. See [upgrade guide](https://puerts.github.io/en/docs/puerts/unity/other/upgrade/)
+
+## [2.0.0-rc.1] - 2023-07-14
+1. Fix: BlitableCopy was broken issue #1427
+2. Fix: two wrapper generation issue #1433 #1432
+
+## [2.0.0-rc.0] - 2023-06-30
+1. Fix: struct's paramless default ctor was unable to use #1301
+2. Fix: op_xxxx method was unable to use after generated #1399
+3. Fix: `GetFriendlyName` was not defined after generated
+4. Fix: the Constructor of BlittableCopy Type didn't invoked
+5. Optimization: isESM check optimize #1391
+
+## [2.0.0-pre.5] - 2023-06-15
+1. Fix: Error occurs when generating classes with `op_explicit` #1363.
+2. Fix: Issue with `ClearModuleCache` causing a crash #1364.
+3. Fix: Error in generating when struct produces recursive definition through pointers in xil2cpp mode #1365.
+4. Fix: Crash when printing struct in xil2cpp mode #1376.
+5. Fix: Crash when assigning JSObject to numeric type C# Field/Property #1383.
+6. Fix: Issue with ineffective `Filter`.
+7. Optimization: Changed xil2cpp mode's c plugin code to be generated instead of being included in the package.
+8. Optimization: Added FAQHelper to optimize code generation and error prompts during build.
+9. Optimization: Improved error messages for reflection calls, compatible with trimmed interfaces.
+10. Optimization: Changed the separator for console.log elements from comma to space.
+11. Optimization: Improved Node.js event loop #1093 #1279.
+12. Optimization: Suppressed warnings from DefaultMode's StaticWrapper.
+13. Feature: Added `JSObject.Get<T>(string)` and refactored ExecuteModule to use this Get interface.
+13. Feature: Added Filter for xil2cpp valuetype declaration.
+
 ## [2.0.0-pre.4] - 2023-05-29
 1. Fix: the Error message threw from JS to CS would have unexpected character.
 2. Fix: doc generating fix #1322 #1329

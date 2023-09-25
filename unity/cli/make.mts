@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "fs";
-import { cd, cp, exec, mkdir, mv } from "@puerts/shell-util"
-import { join, normalize } from "path";
+import { cd, cp, exec, mkdir, mv, rm } from "@puerts/shell-util"
+import { basename, join, normalize } from "path";
 import assert from "assert";
 import downloadBackend from "./backend.mjs";
 import { createRequire } from "module";
@@ -29,9 +29,9 @@ const platformCompileConfig = {
                 assert.equal(0, exec(`cmake ${cmakeDArgs} -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DJS_ENGINE=${options.backend} -DCMAKE_BUILD_TYPE=${options.config} -DANDROID_ABI=${ABI} -H. -B${CMAKE_BUILD_PATH} -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake -DANDROID_NATIVE_API_LEVEL=${API} -DANDROID_TOOLCHAIN=clang -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_NAME}`).code)
                 assert.equal(0, exec(`cmake --build ${CMAKE_BUILD_PATH} --config ${options.config}`).code)
 
-                if (existsSync(`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.a`)) 
+                if (existsSync(`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.a`))
                     return [`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.a`]
-                else 
+                else
                     return [`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.so`, `${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.stripped.so~`]
             }
         },
@@ -46,9 +46,9 @@ const platformCompileConfig = {
                 assert.equal(0, exec(`cmake ${cmakeDArgs} -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DJS_ENGINE=${options.backend} -DCMAKE_BUILD_TYPE=${options.config} -DANDROID_ABI=${ABI} -H. -B${CMAKE_BUILD_PATH} -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake -DANDROID_NATIVE_API_LEVEL=${API} -DANDROID_TOOLCHAIN=clang -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_NAME}`).code)
                 assert.equal(0, exec(`cmake --build ${CMAKE_BUILD_PATH} --config ${options.config}`).code)
 
-                if (existsSync(`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.a`)) 
+                if (existsSync(`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.a`))
                     return [`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.a`]
-                else 
+                else
                     return [`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.so`, `${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.stripped.so~`]
             }
         },
@@ -63,9 +63,9 @@ const platformCompileConfig = {
                 assert.equal(0, exec(`cmake ${cmakeDArgs} -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DJS_ENGINE=${options.backend} -DCMAKE_BUILD_TYPE=${options.config} -DANDROID_ABI=${ABI} -H. -B${CMAKE_BUILD_PATH} -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake -DANDROID_NATIVE_API_LEVEL=${API} -DANDROID_TOOLCHAIN=clang -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_NAME}`).code)
                 assert.equal(0, exec(`cmake --build ${CMAKE_BUILD_PATH} --config ${options.config}`).code)
 
-                if (existsSync(`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.a`)) 
+                if (existsSync(`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.a`))
                     return [`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.a`]
-                else 
+                else
                     return [`${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.so`, `${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.stripped.so~`]
             }
         }
@@ -171,9 +171,7 @@ async function runPuertsMake(cwd: string, options: BuildOptions) {
 
     const BuildConfig = (platformCompileConfig as any)[options.platform][options.arch];
     const CMAKE_BUILD_PATH = cwd + `/build_${options.platform}_${options.arch}_${options.backend}${options.config != "Release" ? "_debug" : ""}`
-    const OUTPUT_PATH = cmakeAddedLibraryName == "puerts_il2cpp" ?
-        cwd + '/../Assets/core/upm/Plugins/' + BuildConfig.outputPluginPath :
-        cwd + '/../Assets/core/upm/Plugins/' + BuildConfig.outputPluginPath;
+    const OUTPUT_PATH = cwd + '/../Assets/core/upm/Plugins/' + BuildConfig.outputPluginPath;
     const BackendConfig = JSON.parse(readFileSync(cwd + `/cmake/backends.json`, 'utf-8'))[options.backend]?.config;
 
     if (BackendConfig?.skip?.[options.platform]?.[options.arch]) {
@@ -198,7 +196,7 @@ async function runPuertsMake(cwd: string, options: BuildOptions) {
     );
     if (!(outputFile instanceof Array)) outputFile = [outputFile];
     const copyConfig = (BackendConfig['copy-libraries'][options.platform]?.[options.arch] || [])
-        .map((pathToBackend: string) => join(cwd, '.backends', options.backend, pathToBackend))
+        .map((pathToBackend: string) => join(cwd, '../native_src/.backends', options.backend, pathToBackend))
         .concat(outputFile);
 
     copyConfig?.forEach((filepath: string) => {
@@ -215,5 +213,17 @@ async function runPuertsMake(cwd: string, options: BuildOptions) {
     return copyConfig;
 }
 
+async function makeOSXUniveralBinary(cwd: string, copyConfig: string[][]): Promise<void> {
+    const OUTPUT_PATH = cwd + '/../Assets/core/upm/Plugins/macOS';
+    const cmakeAddedLibraryName = readFileSync(`${cwd}/CMakeLists.txt`, 'utf-8').match(/add_library\((\w*)/)[1];
+
+    const arm64binary = cwd + '/../Assets/core/upm/Plugins/' + platformCompileConfig.osx.arm64.outputPluginPath + `/lib${cmakeAddedLibraryName}.dylib`;
+    const x64binary = cwd + '/../Assets/core/upm/Plugins/' + platformCompileConfig.osx.x64.outputPluginPath + `/${cmakeAddedLibraryName}.bundle`;
+    assert.equal(0, exec(`lipo -create -output ${join(OUTPUT_PATH, cmakeAddedLibraryName + '.bundle')} ${arm64binary} ${x64binary}`).code)
+
+    rm('-rf', arm64binary);
+    rm('-rf', x64binary);
+}
+
 export default runPuertsMake;
-export { platformCompileConfig }
+export { platformCompileConfig, makeOSXUniveralBinary }

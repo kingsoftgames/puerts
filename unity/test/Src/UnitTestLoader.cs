@@ -5,13 +5,19 @@ using Puerts;
 
 namespace Puerts.UnitTest 
 {
-    public class UnitTestLoader2: IResolvableLoader, ILoader
+    public class UnitTestLoader2: IResolvableLoader, ILoader, IModuleChecker
     {
 
         public UnitTestLoader2() 
         {
 
         }
+
+        public bool IsESM(string filepath)
+        {
+            return !filepath.EndsWith(".cjs");
+        }
+
         /**
         * 判断文件是否存在，并返回调整后文件标识符，供ReadFile使用。
         * localFilePath为文件本地路径，调试器调试时会使用。
@@ -39,7 +45,11 @@ namespace Puerts.UnitTest
             } 
             else if (UnityEngine.Resources.Load(FixSpecifier(specifier)) != null) 
             {
-                return FixSpecifier(specifier);
+                return specifier;
+            }
+            else if (UnityEngine.Resources.Load(FixSpecifier(specifier + "/index.js")) != null) 
+            {
+                return specifier + "/index.js";
             }
             return null;
         }
@@ -47,7 +57,7 @@ namespace Puerts.UnitTest
         [UnityEngine.Scripting.Preserve]
         public bool FileExists(string specifier)
         {
-            return false;
+            return !System.String.IsNullOrEmpty(Resolve(specifier, "."));
         }
 
         [UnityEngine.Scripting.Preserve]
@@ -57,10 +67,13 @@ namespace Puerts.UnitTest
             if (specifier != null) {
                 if (specifier.StartsWith(UnityEngine.Application.streamingAssetsPath) || File.Exists(UnityEngine.Application.streamingAssetsPath + "/" + specifier)) {
                     return System.IO.File.ReadAllText(UnityEngine.Application.streamingAssetsPath + "/" + specifier);
+
                 } else if (mockFileContent.ContainsKey(specifier)) {
                     return mockFileContent[specifier];
+
                 } else if (UnityEngine.Resources.Load(FixSpecifier(specifier)) != null) {
                     return UnityEngine.Resources.Load<UnityEngine.TextAsset>(FixSpecifier(specifier)).text;
+
                 }
             }
             return "";

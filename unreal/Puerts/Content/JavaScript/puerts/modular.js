@@ -76,7 +76,7 @@ var global = global || (function () { return this; }());
         return (packageConfigure && packageConfigure.type === "module") ? packageConfigure.main : undefined;
     }
     
-    function genRequire(requiringDir, isESM) {
+    function genRequire(requiringDir, outerIsESM) {
         let localModuleCache = Object.create(null);
         function require(moduleName) {
             if (org_require) {
@@ -116,37 +116,48 @@ var global = global || (function () { return this; }());
                 return localModuleCache[moduleName].exports;
             }
             let m = {"exports":{}};
-            localModuleCache[moduleName] = m;
-            moduleCache[key] = m;
+            
             let sid = addModule(m);
             let script = loadModule(fullPath);
-            isESM = isESM === true || fullPath.endsWith(".mjs")
+            let isESM = outerIsESM === true || fullPath.endsWith(".mjs")
             if (fullPath.endsWith(".cjs")) isESM = false;
-            if (fullPath.endsWith(".json")) {
-                let packageConfigure = JSON.parse(script);
-                
-                if (fullPath.endsWith("package.json")) {
-                    isESM = packageConfigure.type === "module"
-                    let url = packageConfigure.main || "index.js";
-                    if (isESM) {
-                        url = packageConfigure.exports && packageConfigure.exports["."] && packageConfigure.exports["."]["default"] && packageConfigure.exports["."]["default"]["require"]
-                        if (!url) {
-                            throw new Error("can not require a esm in cjs module!");
+            try {
+                if (fullPath.endsWith(".json")) {
+                    let packageConfigure = JSON.parse(script);
+                    
+                    if (fullPath.endsWith("package.json")) {
+                        isESM = packageConfigure.type === "module"
+                        let url = packageConfigure.main || "index.js";
+                        if (isESM) {
+                            let packageExports = packageConfigure.exports && packageConfigure.exports["."];
+                            if (packageExports)
+                                url =
+                                    (packageExports["default"] && packageExports["default"]["require"]) ||
+                                    (packageExports["require"] && packageExports["require"]["default"]) ||
+                                    packageExports["require"];                        
+                            if (!url) {
+                                throw new Error("can not require a esm in cjs module!");
+                            }
                         }
+                        let fullDirInJs = (fullPath.indexOf('/') != -1) ? fullPath.substring(0, fullPath.lastIndexOf("/")) : fullPath.substring(0, fullPath.lastIndexOf("\\")).replace(/\\/g, '\\\\');
+                        let tmpRequire = genRequire(fullDirInJs, isESM);
+                        let r = tmpRequire(url);
+                        
+                        m.exports = r;
+                    } else {
+                        m.exports = packageConfigure;
                     }
-                    let fullDirInJs = (fullPath.indexOf('/') != -1) ? fullPath.substring(0, fullPath.lastIndexOf("/")) : fullPath.substring(0, fullPath.lastIndexOf("\\")).replace(/\\/g, '\\\\');
-                    let tmpRequire = genRequire(fullDirInJs, isESM);
-                    let r = tmpRequire(url);
-                    tmpModuleStorage[sid] = undefined;
-                    m.exports = r;
                 } else {
-                    tmpModuleStorage[sid] = undefined;
-                    m.exports = packageConfigure;
+                    let r = executeModule(fullPath, script, debugPath, sid, isESM);
+                    if (isESM) {
+                        m.exports = r;
+                    }
                 }
-            } else {
-                executeModule(fullPath, script, debugPath, sid, isESM);
+                localModuleCache[moduleName] = m;
+                moduleCache[key] = m;
+            } finally {
                 tmpModuleStorage[sid] = undefined;
-            }
+            }                
             return m.exports;
         }
 

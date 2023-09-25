@@ -2,8 +2,9 @@ using System.IO;
 using System.Reflection;
 using System.Collections.Generic;
 using Puerts;
+using Puerts.ThirdParty;
 
-public class TxtLoader : IResolvableLoader,  ILoader
+public class TxtLoader : IResolvableLoader,  ILoader, IModuleChecker
 {
     public static string PathToBinDir(string appendix)
     {
@@ -15,11 +16,50 @@ public class TxtLoader : IResolvableLoader,  ILoader
         );
     }
     private string root = PathToBinDir("../../../../../Assets/core/upm/Runtime/Resources");
+    private string commonjsRoot = PathToBinDir("../../../../../Assets/commonjs/upm/Runtime/Resources");
     private string editorRoot = PathToBinDir("../../../../../Assets/core/upm/Editor/Resources");
     private string unittestRoot = PathToBinDir("../../../../Src/Resources");
-    public bool FileExists(string filepath)
+    
+    public bool IsESM(string filepath)
     {
-        return false;
+        return !filepath.EndsWith(".cjs");
+    }
+
+    public bool FileExists(string specifier)
+    {
+        var res = !System.String.IsNullOrEmpty(Resolve(specifier, "."));
+        return res;
+    }
+
+    private string TryResolve(string specifier)
+    {
+        string path = Path.Combine(root, specifier);
+        if (System.IO.File.Exists(path)) 
+        {
+            return path.Replace("\\", "/");
+        }
+        path = Path.Combine(commonjsRoot, specifier);
+        if (System.IO.File.Exists(path)) 
+        {
+            return path.Replace("\\", "/");
+        }
+        path = Path.Combine(editorRoot, specifier);
+        if (System.IO.File.Exists(path)) 
+        {
+            return path.Replace("\\", "/");
+        }
+
+        path = Path.Combine(unittestRoot, specifier);
+        if (System.IO.File.Exists(path)) 
+        {
+            return path.Replace("\\", "/");
+        }
+
+        else if (mockFileContent.ContainsKey(specifier)) 
+        {
+            return specifier;
+        } 
+        return null;
     }
 
     public string Resolve(string specifier, string referrer)
@@ -29,31 +69,10 @@ public class TxtLoader : IResolvableLoader,  ILoader
             specifier = PathHelper.normalize(PathHelper.Dirname(referrer) + "/" + specifier);
         }
 
-        string path = Path.Combine(root, specifier);
-        if (System.IO.File.Exists(path)) 
-        {
-            return path;
-        }
-
-        path = Path.Combine(editorRoot, specifier);
-        if (System.IO.File.Exists(path)) 
-        {
-            return path;
-        }
-
-        path = Path.Combine(unittestRoot, specifier);
-        if (System.IO.File.Exists(path)) 
-        {
-            return path;
-        }
-        else if (mockFileContent.ContainsKey(specifier)) 
-        {
-            return specifier;
-        } 
-        else if (mockFileContent.ContainsKey(specifier + "/index.js")) 
-        {
-            return specifier + "/index.js";
-        }
+        var specifier1 = TryResolve(specifier);
+        if (specifier1 == null) specifier1 = TryResolve(specifier + ".txt");
+        if (specifier1 == null) specifier1 = TryResolve(specifier + "/index.js.txt");
+        if (specifier1 != null) return specifier1;
         return null;
     }
 
@@ -111,6 +130,7 @@ namespace Puerts.UnitTest
             {
                 loader = new TxtLoader();
                 env = new JsEnv(loader);
+                CommonJS.InjectSupportForCJS(env);
 #if PUERTS_GENERAL && !TESTING_REFLECTION
                 PuertsStaticWrap.PuerRegisterInfo_Gen.AddRegisterInfoGetterIntoJsEnv(env);
 #endif

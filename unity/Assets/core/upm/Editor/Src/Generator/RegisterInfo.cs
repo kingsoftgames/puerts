@@ -67,21 +67,38 @@ namespace Puerts.Editor
                 }
             }
 
-            public static List<RegisterInfoForGenerate> GetRegisterInfos(List<Type> genTypes)
+            public static List<RegisterInfoForGenerate> GetRegisterInfos(List<Type> genTypes, HashSet<Type> blittableCopyTypes)
             {
                 BindingFlags flag = BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public;
 
-                return genTypes
+                return genTypes.Where(type => 
+                        !(type.IsEnum || type.IsArray || (Generator.Utils.IsDelegate(type) && type != typeof(Delegate)))
+                    )
                     .Select(type =>
                     {
                         var Collector = new MRICollector();
 
-                        foreach (var m in type.GetConstructors(flag).ToArray())
+                        var ctors = type.GetConstructors(flag).ToArray();
+                        var hasParamlessCtor = false;
+                        foreach (var m in ctors)
                         {
+                            if (m.GetParameters().Length == 0) hasParamlessCtor = true;
                             Collector.Add(m.Name, new MemberRegisterInfoForGenerate
                             {
                                 Name = m.Name,
                                 UseBindingMode = Utils.getBindingMode(m).ToString(),
+                                MemberType = "Constructor",
+                                IsStatic = false,
+
+                                Constructor = "Constructor",
+                            }, false);
+                        }
+                        if (!hasParamlessCtor && type.IsValueType)
+                        {
+                            Collector.Add(".ctor", new MemberRegisterInfoForGenerate
+                            {
+                                Name = ".ctor",
+                                UseBindingMode = "FastBinding",
                                 MemberType = "Constructor",
                                 IsStatic = false,
 
@@ -97,13 +114,13 @@ namespace Puerts.Editor
                         {
                             if (m.DeclaringType == type && m.IsSpecialName && m.Name.StartsWith("op_") && m.IsStatic)
                             {
-                                if (m.Name == "op_Explicit" || m.Name == "op_Implicit") return null;
+                                if (m.Name == "op_Explicit" || m.Name == "op_Implicit") continue;
                                 Collector.Add(m.Name, new MemberRegisterInfoForGenerate
                                 {
                                     Name = m.Name,
                                     UseBindingMode = Utils.getBindingMode(m).ToString(),
                                     MemberType = "Method",
-                                    IsStatic = false,
+                                    IsStatic = m.IsStatic,
 
                                     Method = "O_" + m.Name,
                                 }, false);
@@ -161,7 +178,7 @@ namespace Puerts.Editor
                                     Name = "add_" + m.Name,
                                     UseBindingMode = Utils.getBindingMode(m).ToString(),
                                     MemberType = "Method",
-                                    IsStatic = false,
+                                    IsStatic = addMethod.IsStatic,
 
                                     Method = "A_" + m.Name,
                                 }, false);
@@ -173,7 +190,7 @@ namespace Puerts.Editor
                                     Name = "remove_" + m.Name,
                                     UseBindingMode = Utils.getBindingMode(m).ToString(),
                                     MemberType = "Method",
-                                    IsStatic = false,
+                                    IsStatic = removeMethod.IsStatic,
 
                                     Method = "R_" + m.Name,
                                 }, false);
@@ -197,7 +214,7 @@ namespace Puerts.Editor
                                         Name = "get_Item",
                                         UseBindingMode = Utils.getBindingMode(m).ToString(),
                                         MemberType = "Method",
-                                        IsStatic = false,
+                                        IsStatic = getMethod.IsStatic,
 
                                         Method = "GetItem",
                                     }, false);
@@ -209,13 +226,13 @@ namespace Puerts.Editor
                                         Name = "set_Item",
                                         UseBindingMode = Utils.getBindingMode(m).ToString(),
                                         MemberType = "Method",
-                                        IsStatic = false,
+                                        IsStatic = setMethod.IsStatic,
 
                                         Method = "SetItem",
                                     }, false);
                                 }
                             }
-                            else if (m.GetIndexParameters().GetLength(0) != 1 && !m.IsSpecialName)
+                            else if (m.GetIndexParameters().GetLength(0) == 0 && !m.IsSpecialName)
                             {
 
                                 Collector.Add(m.Name, new MemberRegisterInfoForGenerate
@@ -252,6 +269,8 @@ namespace Puerts.Editor
                         return new RegisterInfoForGenerate
                         {
                             WrapperName = Utils.GetWrapTypeName(type),
+
+                            BlittableCopy = blittableCopyTypes.Contains(type),
 
                             Type = type,
 

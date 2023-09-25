@@ -3,17 +3,12 @@
 #include "FileSystemOperation.h"
 #include "Misc/Paths.h"
 #include "Misc/FileHelper.h"
-// --> modified by kg begin
-// songfuhao: 解决 UE5 Linux 平台编译报错
-/**
+#include "Misc/EngineVersionComparison.h"
+#if UE_VERSION_OLDER_THAN(5, 0, 0)
 #include "HAL/PlatformFilemanager.h"
-*/
-#if (ENGINE_MAJOR_VERSION >= 5)
-#include "HAL/PlatformFileManager.h"
 #else
-#include "HAL/PlatformFilemanager.h"
+#include "HAL/PlatformFileManager.h"
 #endif
-// --< end
 #include "PuertsModule.h"
 #include "Misc/SecureHash.h"
 #ifdef PUERTS_WITH_SOURCE_CONTROL

@@ -6,7 +6,7 @@
 */
 import { FOR } from './tte.mjs'
 
-export default function RegisterInfoTemplate(TypeRegisterInfos, ) {
+export default function RegisterInfoTemplate(TypeRegisterInfos) {
     const typeRegisterInfos = listToJsArray(TypeRegisterInfos);
 
     return `
@@ -25,15 +25,16 @@ namespace PuertsStaticWrap
         {
             return new RegisterInfo 
             {
-#if !EXPERIMENTAL_IL2CPP_PUERTS || !ENABLE_IL2CPP
+#if !EXPERIMENTAL_IL2CPP_PUERTS
                 BlittableCopy = ${item.BlittableCopy},
 #endif
+
                 Members = new System.Collections.Generic.Dictionary<string, MemberRegisterInfo>
                 {
                     ${FOR(listToJsArray(item.Members), member=> `
                     {"${member.Name}${member.IsStatic ? '_static' : ''}", new MemberRegisterInfo { Name = "${member.Name}", IsStatic = ${member.IsStatic}, MemberType = MemberType.${member.MemberType}, UseBindingMode = BindingMode.${member.UseBindingMode}
 #if !EXPERIMENTAL_IL2CPP_PUERTS
-                    ${member.UseBindingMode == 'DontBinding' ? '' : referWrapperMember(item.WrapperName, member.Constructor, member.Method, member.PropertyGetter, member.PropertySetter)}
+                    ${member.UseBindingMode == 'FastBinding' ? referWrapperMember(item.WrapperName, member.Constructor, member.Method, member.PropertyGetter, member.PropertySetter) : ''}
 #endif
                     }},
                     `)}
@@ -44,9 +45,17 @@ namespace PuertsStaticWrap
 
         public static void AddRegisterInfoGetterIntoJsEnv(JsEnv jsEnv)
         {
-            ${FOR(typeRegisterInfos, item => `
-            jsEnv.AddRegisterInfoGetter(typeof(${item.Type.GetFriendlyName()}), GetRegisterInfo_${item.WrapperName});
-            `)}
+            ${FOR(typeRegisterInfos, item => {
+                let ret = `
+                jsEnv.AddRegisterInfoGetter(typeof(${CS.Puerts.TypeExtensions.GetFriendlyName(item.Type)}), GetRegisterInfo_${item.WrapperName});`
+                if (item.BlittableCopy) {
+                    ret += `
+#if !EXPERIMENTAL_IL2CPP_PUERTS
+                ${item.BlittableCopy ? item.WrapperName + ".InitBlittableCopy(jsEnv);": ""}                    
+#endif`
+                }
+                return ret;
+            })}
         }
     }
 }`.trim();

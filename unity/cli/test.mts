@@ -13,6 +13,7 @@ function collectCSFilesAndMakeCompileConfig(dir: string, workdir: string, exclud
         <DefineConstants>${process.platform == 'win32' ? 'PLATFORM_WINDOWS': 'PLATFORM_MAC'};PUER_CONSOLE_TEST;PUERTS_GENERAL;DISABLE_AUTO_REGISTER;PUERTS_REFLECT_ALL_EXTENSION;TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_1;</DefineConstants>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <WarningLevel>0</WarningLevel>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
     `
     const linkPuerTS = `
@@ -21,6 +22,16 @@ function collectCSFilesAndMakeCompileConfig(dir: string, workdir: string, exclud
             .map(pathname =>
 `    <Compile Include="${relative(workdir, pathname).replace(/\//, '\\')}">
             <Link>${relative(join(dir, '../../Assets/core/upm/'), pathname).replace(/\//, '\\')}</Link>
+        </Compile>`
+            ).join('\n')}
+    </ItemGroup>
+    `
+    const linkPuerTSCommonJS = `
+    <ItemGroup>
+        ${glob.sync(join(dir, '../../Assets/commonjs/upm/Runtime/**/*.cs').replace(/\\/g, '/'))
+            .map(pathname =>
+`    <Compile Include="${relative(workdir, pathname).replace(/\//, '\\')}">
+            <Link>${relative(join(dir, '../../Assets/commonjs/upm/Runtime/'), pathname).replace(/\//, '\\')}</Link>
         </Compile>`
             ).join('\n')}
     </ItemGroup>
@@ -50,7 +61,7 @@ function collectCSFilesAndMakeCompileConfig(dir: string, workdir: string, exclud
         }
     </ItemGroup>
     `
-    return [definitions, linkPuerTS, linkUnitTests, linkGenerators].join('\n');
+    return [definitions, linkPuerTS, linkPuerTSCommonJS, linkUnitTests, linkGenerators].join('\n');
 }
 
 async function runTest(cwd: string, copyConfig: any, runInReflection: boolean, filter: string = '') {
@@ -111,7 +122,7 @@ export async function dotnetTest(cwd: string, backend: string, filter: string = 
     const copyConfig = await runPuertsMake(join(cwd, '../../native_src'), {
         platform: process.platform == 'win32' ? 'win' : 'osx',
         config: "Debug",
-        backend: backend,
+        backend: backend || 'v8_9.4',
         arch: process.arch as any
     })
 
@@ -135,17 +146,15 @@ export async function unityTest(cwd: string, unityPath: string) {
         rm("-rf", `${cwd}/Assets/Gen.meta`);
         console.log("[Puer] Building puerts v1");
         await runPuertsMake(join(cwd, '../../native_src'), {
-            backend: 'v8_9.4',
+            backend: 'nodejs_16',
             platform: 'win',
             config: 'Debug',
             arch: 'x64'
         });
 
         console.log("[Puer] Generating wrapper");
-        writeFileSync(`${cwd}/Assets/csc.rsp`, '-define:PUERTS_CPP_OUTPUT_TO_NATIVE_SRC_UPM;')
         execUnityEditor(`-executeMethod TestBuilder.GenV1`);
         rm("-rf", `${cwd}/Library/ScriptAssemblies`);
-        cp(`${cwd}/Assets/Gen/unityenv_for_puerts.h`, `${cwd}/../../Assets/core/upm/Plugins/puerts_il2cpp/`);
         
         console.log("[Puer] Building testplayer for v1");
         mkdir("-p", `${cwd}/build/v1`)
@@ -163,7 +172,7 @@ export async function unityTest(cwd: string, unityPath: string) {
         rm("-rf", `${cwd}/Library/ScriptAssemblies`);
     
         await runPuertsMake(join(cwd, '../../native_src_il2cpp'), {
-            backend: 'v8_9.4',
+            backend: 'nodejs_16',
             platform: 'win',
             config: 'Debug',
             arch: 'x64'

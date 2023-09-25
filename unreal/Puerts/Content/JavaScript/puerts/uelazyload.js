@@ -9,11 +9,9 @@ var global = global || (function () { return this; }());
 (function (global) {
     "use strict";
     
-    let loadUEType = global.__tgjsLoadUEType;
-    global.__tgjsLoadUEType = undefined;
+    let loadUEType = global.puerts.loadUEType;
     
-    let loadCDataType = global.__tgjsLoadCDataType;
-    global.__tgjsLoadCDataType = undefined;
+    let loadCPPType = global.puerts.loadCPPType;
     
     let cache = Object.create(null);
     
@@ -50,7 +48,7 @@ var global = global || (function () { return this; }());
                                 path = `/${c.__path}${path}`
                                 c = c.__parent;
                             }
-                            const obj = UE.Object.Load(path);
+                            const obj = UE.Object.Load(path, true);
                             if (obj) {
                                 const typeName = obj.GetClass().GetName();
                                 if (typeName === 'UserDefinedEnum') {
@@ -74,17 +72,19 @@ var global = global || (function () { return this; }());
     cache["Game"] = createNamespaceOrClass("Game", undefined, TNAMESPACE);
     
     puerts.registerBuildinModule('ue', UE);
+    global.UE = UE;
     
     let CPP = new Proxy(cache, {
         get: function(classWrapers, name) {
             if (!(name in classWrapers)) {
-                classWrapers[name] = loadCDataType(name);
+                classWrapers[name] = loadCPPType(name);
             }
             return classWrapers[name];
         }
     });
     
     puerts.registerBuildinModule('cpp', CPP);
+    global.CPP = CPP;
     
     function ref(x) {
         return [x];
@@ -154,7 +154,7 @@ var global = global || (function () { return this; }());
     
     function blueprint(path) {
         console.warn('deprecated! use blueprint.tojs instead');
-        let ufield = UE.Field.Load(path);
+        let ufield = UE.Field.Load(path, true);
         if (ufield) {
             let jsclass = UEClassToJSClass(ufield);
             jsclass.__puerts_ufield = ufield;
@@ -217,7 +217,7 @@ var global = global || (function () { return this; }());
                 path = `/${c.__path}${path}`
                 c = c.__parent;
             }
-            let ufield = UE.Field.Load(path);
+            let ufield = UE.Field.Load(path, true);
             if (!ufield) {
                 throw new Error(`load ${path} fail!`);
             }
@@ -783,6 +783,7 @@ var global = global || (function () { return this; }());
         "BitmaskEnum": MetaDataInst,
         //  decorator
         "umeta": dummyDecorator,
+        "attach": dummyDecorator
     }
 
     cache.uparam =
@@ -896,5 +897,34 @@ var global = global || (function () { return this; }());
         });
     }
     puerts.__mergePrototype = mergePrototype
+    
+    function removeListItem(list, item) {
+        var found = false;
+        for (var i = 0; i < list.length; ++i) {
+            if (!found) {
+                found = (list[i] === item);
+            }
+            if (found) {
+                list[i] = list[i + 1]; // array[length + 1] === undefined
+            }
+        }
+        if (found) {
+            list.pop();
+        }
+    }
+    puerts.__removeListItem = removeListItem
+    
+    function genListApply(lst) {
+        return function(...args) {
+            const len = lst.length;
+            const list = lst.slice();
+            let ret
+            for (var i = 0; i < len; ++i) {
+                ret = Reflect.apply(list[i], this, args);
+            }
+            return ret;
+        }
+    }
+    puerts.__genListApply = genListApply
     
 }(global));

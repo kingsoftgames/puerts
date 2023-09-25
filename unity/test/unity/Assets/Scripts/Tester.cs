@@ -37,7 +37,7 @@ public class Tester : MonoBehaviour {
                     hasFail = true;
                 },
                 () => {
-#if !UNITY_EDITOR
+#if !UNITY_EDITOR && !UNITY_WEBGL
                     UnityEngine.Application.Quit(hasFail ? 1 : 0);
 #endif
                 }
@@ -71,7 +71,7 @@ public class Tester : MonoBehaviour {
                     if (IsTesting && ca.GetType() == typeof(TestAttribute)) 
                     {
                         // if (method.Name != "DateTimeTest") continue;
-                        // if (!method.DeclaringType.Name.Contains("TimerTest")) continue;
+                        // if (!method.DeclaringType.Name.Contains("AccessControlTest")) continue;
                         UnityEngine.Debug.Log($"Started: TestCase {method.Name}\n");
                         try 
                         {

@@ -69,7 +69,11 @@ let world = (argv.getByName("GameInstance") as UE.GameInstance).GetWorld();
 
 开启该功能，Puerts会构造一个默认的虚拟机
 
-* 引擎构造一个TypeScript（代理对象）时，要跑脚本，找的是这个虚拟机，但这个虚拟机本身相比自行构造的虚拟机没什么两样，和UE的交互规则都一样
+* 引擎构造一个继承了UE类TypeScript类（代理对象）时，这个TypeScript类以及其引用的代码，都是跑在这个默认虚拟机上
+
+  - 这个虚拟机本身相比自行构造的虚拟机没什么两样，和UE的交互规则都一样
+  
+  - 由于虚拟机间相互隔离，所以如果你自己创建了虚拟机，你会发现那里的代码和继承了UE类TypeScript类相互访问不了
 
 * 该虚拟机不会启动一个启动脚本，也不会传参数，因而argv不可用，也没必要用
 
@@ -85,7 +89,7 @@ UE里头，支持反射的API（标注了UCLASS，UPPROPERTY，UFUNCTION，USTRU
 
 要注意的是，在TypeScript里的类名是的UE类型ScriptName，相比C++类，都是去了前缀的，比如FVector在TypeScript里头是Vector，AActor是Actor。
 
-反射api的使用文档在[这](interact_with_uclass.md)。
+反射api的使用文档：[script_call_uclass](script_call_uclass.md)。
 
 如果非反射C++ API呢？比如UE部分C++ API，比如第三方C++库。
 

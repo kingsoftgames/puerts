@@ -7,6 +7,7 @@
  */
 
 #include "TypeScriptGeneratedClass.h"
+#include "Runtime/Launch/Resources/Version.h"
 #include "PropertyMacros.h"
 #include "JSGeneratedFunction.h"
 #include "JSLogger.h"
@@ -237,7 +238,8 @@ void UTypeScriptGeneratedClass::CancelRedirection()
             continue;
         }
         Function->FunctionFlags &= ~FUNC_Native;
-        Function->SetNativeFunc(ProcessInternal);
+        // Function->SetNativeFunc(ProcessInternal);
+        Function->Bind();    // the same as Function->SetNativeFunc(ProcessInternal) if no native
         NativeFunctionLookupTable.RemoveAll(
             [=](const FNativeFunctionLookup& NativeFunctionLookup) { return Function->GetFName() == NativeFunctionLookup.Name; });
     }

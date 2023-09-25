@@ -126,7 +126,6 @@ namespace Puerts.Editor
                         }
                         while (makeFileUniqueMap.ContainsKey(filePath.ToLower()))
                         {
-                            // ���ڴ�Сд�ظ����������һ��idȥ��
                             filePath = saveTo + staticWrapperInfo.WrapClassName + "_" + uniqueId + ".cs";
                             uniqueId++;
                         }
@@ -151,46 +150,12 @@ namespace Puerts.Editor
 
                 Utils.SetFilters(null);
             }
-
-            public static void GenMarcoHeader(string outDir, bool forceIl2Cpp)
-            {
-                var filePath = outDir + "unityenv_for_puerts.h";
-                string fileContent = "";
-
-#if !UNITY_2021_1_OR_NEWER
-                if (false)
-#endif
-                {
-                    fileContent += @"
-#ifndef UNITY_2021_1_OR_NEWER
-    #define UNITY_2021_1_OR_NEWER
-#endif";
-                }
-
-#if UNITY_ANDROID || UNITY_IPHONE
-            if (false)
-#endif
-                {
-                    fileContent += @"
-#ifndef PUERTS_SHARED
-    #define PUERTS_SHARED
-#endif";
-                }
-
-                if (forceIl2Cpp) fileContent += @"
-#ifndef EXPERIMENTAL_IL2CPP_PUERTS
-    #define EXPERIMENTAL_IL2CPP_PUERTS
-#endif";
-                using (StreamWriter textWriter = new StreamWriter(filePath, false, Encoding.UTF8))
-                {
-                    textWriter.Write(fileContent);
-                    textWriter.Flush();
-                }
-            }
+            
             public static void GenRegisterInfo(string outDir, ILoader loader = null)
             {
                 var configure = Puerts.Configure.GetConfigureByTags(new List<string>() {
                         "Puerts.BindingAttribute",
+                        "Puerts.BlittableCopyAttribute",
                     });
                 var genTypes = configure["Puerts.BindingAttribute"].Select(kv => kv.Key)
                     .Where(o => o is Type)
@@ -199,12 +164,18 @@ namespace Puerts.Editor
                     .Distinct()
                     .ToList();
 
+                var blittableCopyTypes = new HashSet<Type>(configure["Puerts.BlittableCopyAttribute"].Select(kv => kv.Key)
+                    .Where(o => o is Type)
+                    .Cast<Type>()
+                    .Where(t => !t.IsPrimitive && Utils.isBlittableType(t))
+                    .Distinct());
+
                 if (!Utils.HasFilter)
                 {
                     Utils.SetFilters(Configure.GetFilters());
                 }
                 
-                var RegisterInfos = RegisterInfoGenerator.GetRegisterInfos(genTypes);
+                var RegisterInfos = RegisterInfoGenerator.GetRegisterInfos(genTypes, blittableCopyTypes);
 
                 if (loader == null)
                 {

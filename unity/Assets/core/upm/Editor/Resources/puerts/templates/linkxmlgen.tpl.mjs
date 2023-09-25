@@ -15,27 +15,27 @@ export function LinkXMLTemplate(genTypes) {
 </linker>`.trim();
 }
 
-export function GenericTypePreserverTemplate(genTypes) {
-    return `
-namespace Puerts
-{
-    #if ENABLE_IL2CPP
-        [UnityEngine.Scripting.Preserve]
-    #endif
-    public static class GenericTypePreserver_Gen
-    {
-        #if ENABLE_IL2CPP
-            [UnityEngine.Scripting.Preserve]
-        #endif
-        public static void Preserver()
-        {
-        ${FOR(listToJsArray(genTypes).filter(item=> item.IsGenericType), item => `
-            UnityEngine.Debug.Log(typeof(${item.GetFriendlyName()}));
-        `)}
-        }
-    }
-}`.trim();
-}
+// export function GenericTypePreserverTemplate(genTypes) {
+//     return `
+// namespace Puerts
+// {
+//     #if ENABLE_IL2CPP
+//         [UnityEngine.Scripting.Preserve]
+//     #endif
+//     public static class GenericTypePreserver_Gen
+//     {
+//         #if ENABLE_IL2CPP
+//             [UnityEngine.Scripting.Preserve]
+//         #endif
+//         public static void Preserver()
+//         {
+//         ${FOR(listToJsArray(genTypes).filter(item=> item.IsGenericType), item => `
+//             UnityEngine.Debug.Log(typeof(${item.GetFriendlyName()}));
+//         `)}
+//         }
+//     }
+// }`.trim();
+// }
 
 function getAssemblyInfo(genTypes) {
     if (!genTypes) return [];
@@ -45,8 +45,11 @@ function getAssemblyInfo(genTypes) {
         let assemblyName = type.Assembly.GetName(false).Name;
         !assemblyInfo.has(assemblyName) && assemblyInfo.set(assemblyName, [])
         let types = assemblyInfo.get(assemblyName)
+
         if (type.IsGenericType) {
             types.push(type.FullName.split('[')[0])
+        } else if (type.IsNested) {
+            types.push(type.FullName.replace('+', '/'))
         } else {
             types.push(type.FullName)
         }

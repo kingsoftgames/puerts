@@ -6,6 +6,58 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 you can get the english version change log at [Github Release](https://github.com/Tencent/puerts/releases)
 
+## [2.0.2] - 2023-09-07
+1. 修复：静态wrapper里params参数获取到的默认值不正确的问题 @ctxdegithub
+2. 修复：使用v8_8.4版本build的问题。unity2020及以下xil2cpp模式armv7可能需要v8_8.4才能编通 #1469
+3. 优化：xi2cpp模式下安卓平台合并v8和puerts两个库
+4. 优化：mac下改为使用universal binary，不再区分两个平台（覆盖升级时请注意删除旧Plugin）@mikejurka
+5. 优化：JsEnv现在会暴露Isolate字段，获得v8::Isolate的指针 @mingxxming
+6. 优化：去掉puerts自己的SnapshotBlob.h，直接使用v8内置的
+7. 优化：构建脚本现在可以运行在低版本node上 @xiezheng-XD #1495
+8. 优化：Linux平台自带inspector @geequlim
+
+## [2.0.1] - 2023-08-16
+1. 修复：内部类型在link.xml中声明不正确的问题 #1460
+2. 修复：xil2cpp模式下使用结构体out参数可能导致crash的问题 #1460
+3. 修复：xil2cpp模式下扩展函数获取默认参数不正确的问题 #1456
+4. 修复：JSObject没有正确调用回收的问题
+
+## [2.0.0] - 2023-07-31
+1. 修复：debugpath失效并导致VSCode调试不可用的问题
+2. 修复：xil2cpp模式下`puer.$genericMethod`无法获取父类泛型函数的问题 #1417 @danij91
+3. 修复：生成代码时报GetFriendlyName is not a function的问题 #1437
+
+这个版本是2.0第一个正式版本。感谢所有参与过2.0内测的朋友。
+
+对升级有疑问的朋友可以参见[升级指南](https://puerts.github.io/docs/puerts/unity/other/upgrade)
+
+## [2.0.0-rc.1] - 2023-07-14
+1. 修复: BlittableCopy不可用的问题 #1427
+2. 修复: 两个wrapper生成的问题 #1433 #1432
+
+## [2.0.0-rc.0] - 2023-06-30
+1. 修复：xil2cpp模式下结构体默认无参构造函数不可用的问题 #1301
+2. 修复：运算符重载不可用的问题 #1399
+3. 修复：已生成wrapper时点击生成报GetFriendlyName不存在的问题
+3. 修复：BlittableCopy类构造函数不生效的问题
+4. 优化：isESM检测优化 #1391
+
+## [2.0.0-pre.5] - 2023-06-15
+1. 修复：生成带op_explicit的类的时候会出现报错 #1363
+2. 修复：ClearModuleCache导致crash的问题 #1364
+3. 修复：xil2cpp模式下结构体通过指针的方式产生递归定义时生成报错的问题 #1365
+4. 修复：xil2cpp模式下打印结构体时crash的问题 #1376
+5. 修复：向数字类型的C# Field/Prop赋值JSObject时crash的问题 #1383
+6. 修复：Filter过滤失效的问题
+7. 优化：xil2cpp的c plugin代码改成生成出来，而不是包内自带。
+8. 优化：添加FAQHelper，用于优化代码生成和build时的错误提示
+9. 优化：反射调用时错误信息优化，兼容接口被裁剪的情况
+10. 优化：console.log各个元素的分隔符由逗号变为空格
+11. 优化：Node.js事件循环优化 #1093 #1279
+12. 优化：屏蔽了DefaultMode StaticWrapper报的警告
+13. 功能：添加`JSObject.Get<T>(string)`，ExecuteModule也重构改为使用该Get接口
+14. 功能：添加了一种新的Filter用于过滤xil2cpp模式的结构体类型声明
+
 ## [2.0.0-pre.4] - 2023-05-29
 1. 修复：从JS往C#抛错时可能出现非法字符。
 2. 修复：注释文档生成的两个问题 #1322 #1329

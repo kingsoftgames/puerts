@@ -118,6 +118,7 @@ namespace Puerts.Editor
                 {
                     bool IsGenericWrapper = false;
                     TypeGenericArgumentsGenInfo[] GenericArgumentsInfos = null;
+                    
 #if PUERTS_GENERAL || UNITY_2019_OR_NEWER
                     // 如果是泛型类，且泛型参数对于PuerTS来说是一个NativeObject类型，则Wrapper可以用泛型处理。
                     // 这里要先识别出NativeObject的参数位置，并将其替换
@@ -187,7 +188,7 @@ namespace Puerts.Editor
                         .Where(m => 
                         { 
                             BindingMode mode = Utils.getBindingMode(m);
-                            if (mode == BindingMode.DontBinding) return false;
+                            if (mode == BindingMode.DontBinding || mode == BindingMode.SlowBinding) return false;
                             if (mode == BindingMode.LazyBinding) lazyCollector.Add(m); 
                             return true; 
                         })
@@ -203,14 +204,14 @@ namespace Puerts.Editor
                         {
                             extensionMethodsList = extensionMethodsList.Where(m => genTypes.Contains(m.DeclaringType)).ToArray();
                         }
-                        extensionMethodsList
+                        extensionMethodsList = extensionMethodsList
                             .Where(m => 
                             { 
                                 BindingMode mode = Utils.getBindingMode(m);
-                                if (mode == BindingMode.DontBinding) return false;
+                                if (mode == BindingMode.DontBinding || mode == BindingMode.SlowBinding) return false;
                                 if (mode == BindingMode.LazyBinding) lazyCollector.Add(m); 
                                 return true; 
-                            });
+                            }).ToArray();
                     }
 
                     foreach (var m in methodLists)
@@ -251,8 +252,8 @@ namespace Puerts.Editor
                         { 
                             if (m.Name == "op_Explicit" || m.Name == "op_Implicit")  { lazyCollector.Add(m); return false; }
                             BindingMode mode = Utils.getBindingMode(m);
-                            if (mode == BindingMode.DontBinding) return false;
                             if (mode == BindingMode.LazyBinding) { lazyCollector.Add(m); return false; }
+                            if (mode != BindingMode.FastBinding) return false;
                             return true; 
                         })
                         .GroupBy(m => new MethodKey { Name = m.Name, IsStatic = m.IsStatic })
@@ -262,7 +263,7 @@ namespace Puerts.Editor
                         .Where(m =>
                         { 
                             BindingMode mode = Utils.getBindingMode(m);
-                            if (mode == BindingMode.DontBinding) return false;
+                            if (mode != BindingMode.FastBinding) return false;
                             // constrcutor is not allowed to be lazy
                             // if (mode == BindingMode.LazyBinding) { lazyCollector.Add(m); return false; }
                             return true; 
@@ -303,8 +304,8 @@ namespace Puerts.Editor
                             .Where(p =>
                             { 
                                 BindingMode mode = Utils.getBindingMode(p);
-                                if (mode == BindingMode.DontBinding) return false;
                                 if (mode == BindingMode.LazyBinding) { lazyCollector.Add(p); return false; }
+                                if (mode != BindingMode.FastBinding) return false;
                                 return true; 
                             })
                             .Select(p => PropertyGenInfo.FromPropertyInfo(p))
@@ -314,8 +315,8 @@ namespace Puerts.Editor
                                     .Where(f =>
                                     { 
                                         BindingMode mode = Utils.getBindingMode(f);
-                                        if (mode == BindingMode.DontBinding) return false;
                                         if (mode == BindingMode.LazyBinding) { lazyCollector.Add(f); return false; }
+                                        if (mode != BindingMode.FastBinding) return false;
                                         return true; 
                                     })
                                     .Select(f => PropertyGenInfo.FromFieldInfo(f))
@@ -329,7 +330,6 @@ namespace Puerts.Editor
                             .Where(e =>
                             { 
                                 BindingMode mode = Utils.getBindingMode(e);
-                                if (mode == BindingMode.DontBinding) return false;
                                 if (mode == BindingMode.LazyBinding) 
                                 { 
                                     var adder = e.GetAddMethod();
@@ -339,6 +339,7 @@ namespace Puerts.Editor
 
                                     return false; 
                                 }
+                                if (mode != BindingMode.FastBinding) return false;
                                 return true; 
                             })
                             .Select(e => EventGenInfo.FromEventInfo(e))
@@ -387,7 +388,7 @@ namespace Puerts.Editor
                         result.TypeName = Utils.RemoveRefAndToConstraintType(parameterInfo.ParameterType.GetElementType()).GetFriendlyName();
                     }
                     result.ExpectCsType = string.Format("typeof({0})", result.TypeName);//((ExpectJsType & JsValueType.NativeObject) == JsValueType.NativeObject) ? string.Format("typeof({0})", result.TypeName) : "null";
-                    result.DefaultValue = ConvertDefaultValueToString(parameterInfo.DefaultValue, result.TypeName);
+                    result.DefaultValue = result.IsParams ? "System.Array.Empty<" + result.TypeName + ">()" : ConvertDefaultValueToString(parameterInfo.DefaultValue, result.TypeName);
                     Utils.FillEnumInfo(result, parameterInfo.ParameterType);
                     return result;
                 }
@@ -403,7 +404,12 @@ namespace Puerts.Editor
                         }
                         else if (valueType.IsEnum)
                         {
-                            return valueType.FullName.Replace("+", ".") + "." + value.ToString();
+                            // if the default value is 'default' but the enum does not has item equals to 0
+                            // we should translate it into default(TypeName)
+                            var enumName = valueType.FullName.Replace("+", ".");
+                            var valueName = value.ToString();
+                            if (valueName == "0") return "default(" + enumName + ")";
+                            else return enumName + "." + valueName;
                         } 
                         else if (valueType.IsPrimitive)
                         {

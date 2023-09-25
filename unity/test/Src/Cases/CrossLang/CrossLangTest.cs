@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using System;
+using System.Runtime.InteropServices;
 
 namespace Puerts.UnitTest
 {
@@ -22,6 +23,29 @@ namespace Puerts.UnitTest
             value = val;
             value2 = 0;
             value3 = 0;
+        }
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    [UnityEngine.Scripting.Preserve]
+    public unsafe struct TestUnsafeStruct
+    {
+        public uint uintField;
+        public bool boolField;
+        public byte* bytePointerField;
+        public TestUnsafeStruct* anotherStructField;
+
+        [UnityEngine.Scripting.Preserve]
+        public TestUnsafeStruct(uint input)
+        {
+            uintField = input;
+            boolField = false;
+            byte b = 8;
+            bytePointerField = &b;
+            anotherStructField = (TestUnsafeStruct*)Marshal.AllocHGlobal(Marshal.SizeOf<TestUnsafeStruct>());
+            anotherStructField->uintField = input;
+            anotherStructField->anotherStructField = null;
+            anotherStructField->bytePointerField = &b;
+            anotherStructField->boolField = false;
         }
     }
 
@@ -48,7 +72,7 @@ namespace Puerts.UnitTest
             return TestEnum.B;
         }
     }
-    public class TestHelper
+    public unsafe class TestHelper
     {
         protected static TestHelper instance;
         public static TestHelper GetInstance() 
@@ -112,6 +136,7 @@ namespace Puerts.UnitTest
             env.UsingFunc<long, long>();
             env.UsingFunc<TestStruct, TestStruct>();
             env.UsingFunc<TestStruct?, TestStruct?>();
+            env.UsingFunc<TestUnsafeStruct, TestUnsafeStruct>();
 #endif
         }
 
@@ -412,12 +437,46 @@ namespace Puerts.UnitTest
             AssertAndPrint("CSNullableNativeStructTestFieldStatic", nullableNativeStructTestFieldStatic, null);
             AssertAndPrint("CSNullableNativeStructTestPropStatic", nullableNativeStructTestPropStatic, null);
         }
+
+        /**
+        * unsafe结构体，判断指针的值
+        */
+        public TestUnsafeStruct NativeUnsafeStructTestPipeLine(TestUnsafeStruct initialValue, out TestUnsafeStruct outArg, Func<TestUnsafeStruct, TestUnsafeStruct> JSValueHandler)
+        {
+            AssertAndPrint("CSGetNativeUnsafeStructArgFromJS", initialValue.uintField, initialValue.anotherStructField->uintField);
+            AssertAndPrint("CSGetNativeUnsafeStructReturnFromJS", JSValueHandler(initialValue).anotherStructField->uintField, initialValue.anotherStructField->uintField);
+
+            outArg = initialValue;
+            return initialValue;
+        }
+        public TestUnsafeStruct nativeUnsafeStructTestField = default(TestUnsafeStruct);
+        protected TestUnsafeStruct _nativeUnsafeStructTestProp = default(TestUnsafeStruct);
+        public TestUnsafeStruct nativeUnsafeStructTestProp 
+        {
+            get { return _nativeUnsafeStructTestProp; }
+            set { _nativeUnsafeStructTestProp = value; }
+        }
+        public static TestUnsafeStruct nativeUnsafeStructTestFieldStatic = default(TestUnsafeStruct);
+        protected static TestUnsafeStruct _nativeUnsafeStructTestPropStatic = default(TestUnsafeStruct);
+        public static TestUnsafeStruct nativeUnsafeStructTestPropStatic
+        {
+            get { return _nativeUnsafeStructTestPropStatic; }
+            set { _nativeUnsafeStructTestPropStatic = value; }
+        }
+        public void NativeUnsafeStructTestCheckMemberValue()
+        {
+            AssertAndPrint("CSNativeUnsafeStructTestField", nativeUnsafeStructTestField.anotherStructField->uintField, 765);
+            AssertAndPrint("CSNativeUnsafeStructTestProp", nativeUnsafeStructTestProp.anotherStructField->uintField, 765);
+            AssertAndPrint("CSNativeUnsafeStructTestFieldStatic", nativeUnsafeStructTestFieldStatic.anotherStructField->uintField, 765);
+            AssertAndPrint("CSNativeUnsafeStructTestPropStatic", nativeUnsafeStructTestPropStatic.anotherStructField->uintField, 765);
+        }
+
         /**
         * CS侧暂无法处理，判断引用即可
         */
         public JSObject JSObjectTestPipeLine(JSObject initialValue, Func<JSObject, JSObject> JSValueHandler) 
         {
-            AssertAndPrint("CSGetJSObjectArgFromJS", initialValue != null);
+            AssertAndPrint("CSGetJSObjectArgFromJS", initialValue.Get<string>("puerts") == "niubi");
             AssertAndPrint("CSGetJSObjectReturnFromJS", JSValueHandler(initialValue) == initialValue);
             return initialValue;
         }
@@ -563,7 +622,7 @@ namespace Puerts.UnitTest
             jsEnv.Tick();
         }
         //
-
+#if !UNITY_WEBGL
         [Test]
         public void BigIntInstanceTest()
         {
@@ -593,6 +652,7 @@ namespace Puerts.UnitTest
             ");
             jsEnv.Tick();
         }
+#endif
         [Test]
         public void ArrayBufferInstanceTest()
         {
@@ -709,6 +769,35 @@ namespace Puerts.UnitTest
             jsEnv.Tick();
         }
         [Test]
+        public void NativeUnsafeStructInstanceTest()
+        {
+            var jsEnv = UnitTestEnv.GetEnv();
+            jsEnv.Eval(@"
+                (function() {
+                    const TestHelper = CS.Puerts.UnitTest.TestHelper;
+                    const assertAndPrint = TestHelper.AssertAndPrint.bind(TestHelper);
+
+                    const testHelper = TestHelper.GetInstance();
+
+                    const outRef = [];
+                    const oNativeUnsafeStruct = outRef[0] = new CS.Puerts.UnitTest.TestUnsafeStruct(1);
+                    const rNativeUnsafeStruct = testHelper.NativeUnsafeStructTestPipeLine(oNativeUnsafeStruct, outRef, function (obj) {
+                        assertAndPrint('JSGetNativeUnsafeStructArgFromCS', obj.value == oNativeUnsafeStruct.value);
+                        return oNativeUnsafeStruct;
+                    });
+                    assertAndPrint('JSGetNativeUnsafeStructOutArgFromCS', outRef[0].value == oNativeUnsafeStruct.value);
+                    assertAndPrint('JSGetNativeUnsafeStructReturnFromCS', rNativeUnsafeStruct.value == oNativeUnsafeStruct.value);
+
+                    testHelper.nativeUnsafeStructTestField = new CS.Puerts.UnitTest.TestUnsafeStruct(765)
+                    testHelper.nativeUnsafeStructTestProp = new CS.Puerts.UnitTest.TestUnsafeStruct(765)
+                    TestHelper.nativeUnsafeStructTestFieldStatic = new CS.Puerts.UnitTest.TestUnsafeStruct(765)
+                    TestHelper.nativeUnsafeStructTestPropStatic = new CS.Puerts.UnitTest.TestUnsafeStruct(765)
+                    testHelper.NativeUnsafeStructTestCheckMemberValue();
+                })()
+            ");
+            jsEnv.Tick();
+        }
+        [Test]
         public void JSObjectInstanceTest()
         {
             var jsEnv = UnitTestEnv.GetEnv();
@@ -721,7 +810,7 @@ namespace Puerts.UnitTest
 
                     const oJSObject = { 'puerts': 'niubi' };
                     const rJSObject = testHelper.JSObjectTestPipeLine(oJSObject, function(obj) {
-                        assertAndPrint('JSGetJSObjectArgFromCS', obj == oJSObject);
+                        assertAndPrint('JSGetJSObjectArgFromCS', obj.puerts == oJSObject.puerts);
                         return oJSObject
                     });
                     assertAndPrint('JSGetJSObjectReturnFromCS', rJSObject == oJSObject);

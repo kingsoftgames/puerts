@@ -17,8 +17,12 @@ var global = global || (function () { return this; }());
     const Wasm_MemoryBuffer = global.__tgjsWasm_MemoryBuffer
     global.__tgjsWasm_MemoryBuffer = undefined
     class Wasm3Memory{
-        constructor({initial, maximum}){
-            this._Seq = Wasm_NewMemory(initial, maximum)
+        constructor({initial, maximum, _Seq}){
+            if(_Seq) {
+                this._Seq = _Seq
+            }else{
+                this._Seq = Wasm_NewMemory(initial, maximum)
+            }
         }
         grow(n){
             Wasm_MemoryGrowth(this._Seq, n)
@@ -28,6 +32,45 @@ var global = global || (function () { return this; }());
         }
     }
     Wasm3.Memory = Wasm3Memory;
+    
+    const Wasm_TableGrow = global.__tgjsWasm_TableGrow;
+    global.__tgjsWasm_TableGrow = undefined;
+    const Wasm_TableSet = global.__tgjsWasm_TableSet;
+    global.__tgjsWasm_TableSet = undefined;
+    const Wasm_TableLen = global.__tgjsWasm_TableLen;
+    global.__tgjsWasm_TableLen = undefined;
+    
+    class Wasm3Table {
+        grow(n) {
+            if (this._runtimeSeq && typeof this._moduleIndex === 'number') {
+                return Wasm_TableGrow(this._runtimeSeq, this._moduleIndex, n);
+            } else {
+                throw new Error("invalid table");
+            }
+        }
+        
+        set(index, fn) {
+            if (this._runtimeSeq && typeof this._moduleIndex === 'number') {
+                return Wasm_TableSet(this._runtimeSeq, this._moduleIndex, index, fn);
+            } else {
+                throw new Error("invalid table");
+            }
+        }
+        
+        get(index) {
+            throw new Error("not implemented in wasm3 version");
+        }
+        
+        get length() {
+            if (this._runtimeSeq && typeof this._moduleIndex === 'number') {
+                return Wasm_TableLen(this._runtimeSeq, this._moduleIndex);
+            } else {
+                throw new Error("invalid table");
+            }
+        }
+    }
+    
+    Wasm3.Table = Wasm3Table;
 
     class Wasm3Module{
         constructor(bufferSource){
@@ -42,6 +85,28 @@ var global = global || (function () { return this; }());
         constructor(InWasm3Module, importObject){
             this.exports = {}
             this._Seq = Wasm_Instance(InWasm3Module._bufferSouce, importObject, this.exports)
+            if (this.exports.__memoryExport) {
+                this.exports[this.exports.__memoryExport] = new Wasm3Memory({_Seq:this._Seq});
+                this.exports.__memoryExport = undefined;
+            }
+            if (this.exports.__tableExport && typeof this.exports.__moduleIndex === 'number') {
+                var tbl = new Wasm3Table();
+                tbl._runtimeSeq = this._Seq;
+                tbl._moduleIndex = this.exports.__moduleIndex;
+                this.exports[this.exports.__tableExport] = tbl;
+                this.exports.__tableExport = undefined;
+                this.exports.__moduleIndex = undefined;
+            } else {
+                for(var k in importObject) {
+                    var tbl = importObject[k];
+                    if (tbl instanceof Wasm3Table) {
+                        tbl._runtimeSeq = this._Seq;
+                        tbl._moduleIndex = this.exports.__moduleIndex;
+                        break;
+                    }
+                }
+            }
+            
         }
     }
 
@@ -51,10 +116,11 @@ var global = global || (function () { return this; }());
             resolve(ins)
         })
     }
+    Wasm3.Instance = Wasm3ModuleInstance;
 
     const __tgjsWasm_OverrideWebAssembly = global.__tgjsWasm_OverrideWebAssembly
     global.__tgjsWasm_OverrideWebAssembly = undefined
-    if(!global.WebAssembly && __tgjsWasm_OverrideWebAssembly()){
+    if(__tgjsWasm_OverrideWebAssembly()){
         global.WebAssembly = Wasm3
     }
 
